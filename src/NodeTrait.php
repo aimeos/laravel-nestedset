@@ -746,7 +746,7 @@ trait NodeTrait
      *
      * Use `children` key on `$attributes` to create child nodes.
      */
-    public static function create(array $attributes = [], self|null $parent = null)
+    public static function create(array $attributes = [], ?self $parent = null)
     {
         $children = Arr::pull($attributes, 'children');
 
