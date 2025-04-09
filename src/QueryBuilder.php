@@ -188,7 +188,7 @@ class QueryBuilder extends Builder
      *
      * @return $this
      */
-    public function whereNodeBetween($values, $boolean = 'and', $not = false, $query = null)
+    public function whereNodeBetween($values, $boolean = 'and', $not = false, ?Query $query = null)
     {
         ($query ?? $this->query)->whereBetween($this->model->getTable() . '.' . $this->model->getLftName(), $values, $boolean, $not);
 
@@ -861,7 +861,7 @@ class QueryBuilder extends Builder
      *
      * @return int The number of changed nodes
      */
-    public function fixTree($root = null)
+    public function fixTree(?Model $root = null)
     {
         $columns = [
             $this->model->getKeyName(),
@@ -899,7 +899,7 @@ class QueryBuilder extends Builder
      *
      * @return int
      */
-    protected function fixNodes(array &$dictionary, $parent = null)
+    protected function fixNodes(array &$dictionary, ?Model $parent = null)
     {
         $parentId = $parent ? $parent->getKey() : null;
         $cut = $parent ? $parent->getLft() + 1 : 1;
@@ -941,7 +941,7 @@ class QueryBuilder extends Builder
      * @internal param int $fixed
      */
     protected static function reorderNodes(
-        array &$dictionary, array &$updated, $parentId = null, $cut = 1
+        array &$dictionary, array &$updated, null|int|string $parentId = null, $cut = 1
     ) {
         if ( ! isset($dictionary[$parentId])) {
             return $cut;
@@ -973,11 +973,11 @@ class QueryBuilder extends Builder
      * @param array $data
      * @param bool $delete Whether to delete nodes that exists but not in the data
      *                     array
-     * @param null $root
+     * @param ?Model|NodeTrait $root
      *
      * @return int
      */
-    public function rebuildTree(array $data, $delete = false, $root = null)
+    public function rebuildTree(array $data, $delete = false, ?Model $root = null)
     {
         if ($this->model->usesSoftDelete()) {
             $this->withTrashed();
@@ -1084,7 +1084,7 @@ class QueryBuilder extends Builder
      *
      * @return $this
      */
-    public function applyNestedSetScope($table = null)
+    public function applyNestedSetScope(?string $table = null)
     {
         return $this->model->applyNestedSetScope($this, $table);
     }

@@ -82,7 +82,7 @@ class NodeTest extends PHPUnit\Framework\TestCase
         $this->assertEquals(array('errors' => null), $actual, "The tree structure of $table is broken!");
     }
 
-    public function dumpTree($items = null)
+    public function dumpTree(?array $items = null)
     {
         if ( ! $items) $items = Category::withTrashed()->defaultOrder()->get();
 

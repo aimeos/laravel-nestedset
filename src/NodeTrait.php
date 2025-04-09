@@ -671,7 +671,7 @@ trait NodeTrait
      *
      * @return QueryBuilder
      */
-    public function newNestedSetQuery($table = null)
+    public function newNestedSetQuery(?string $table = null)
     {
         $builder = $this->usesSoftDelete()
             ? $this->withTrashed()
@@ -681,22 +681,19 @@ trait NodeTrait
     }
 
     /**
-     * @param string $table
-     *
      * @return QueryBuilder
      */
-    public function newScopedQuery($table = null)
+    public function newScopedQuery(?string $table = null)
     {
         return $this->applyNestedSetScope($this->newQuery(), $table);
     }
 
     /**
      * @param mixed $query
-     * @param string $table
      *
      * @return mixed
      */
-    public function applyNestedSetScope($query, $table = null)
+    public function applyNestedSetScope($query, ?string $table = null)
     {
         if ( ! $scoped = $this->getScopeAttributes()) {
             return $query;
@@ -748,10 +745,8 @@ trait NodeTrait
      * {@inheritdoc}
      *
      * Use `children` key on `$attributes` to create child nodes.
-     *
-     * @param self $parent
      */
-    public static function create(array $attributes = [], self $parent = null)
+    public static function create(array $attributes = [], ?self $parent = null)
     {
         $children = Arr::pull($attributes, 'children');
 
@@ -1221,11 +1216,9 @@ trait NodeTrait
     }
 
     /**
-     * @param array|null $except
-     *
      * @return \Illuminate\Database\Eloquent\Model
      */
-    public function replicate(array $except = null)
+    public function replicate(?array $except = null)
     {
         $defaults = [
             $this->getParentIdName(),
