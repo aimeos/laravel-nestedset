@@ -671,7 +671,7 @@ trait NodeTrait
      *
      * @return QueryBuilder
      */
-    public function newNestedSetQuery(?string $table = null)
+    public function newNestedSetQuery($table = null)
     {
         $builder = $this->usesSoftDelete()
             ? $this->withTrashed()
@@ -683,7 +683,7 @@ trait NodeTrait
     /**
      * @return QueryBuilder
      */
-    public function newScopedQuery(?string $table = null)
+    public function newScopedQuery($table = null)
     {
         return $this->applyNestedSetScope($this->newQuery(), $table);
     }
@@ -693,7 +693,7 @@ trait NodeTrait
      *
      * @return mixed
      */
-    public function applyNestedSetScope($query, ?string $table = null)
+    public function applyNestedSetScope($query, $table = null)
     {
         if ( ! $scoped = $this->getScopeAttributes()) {
             return $query;
