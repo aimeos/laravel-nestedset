@@ -681,6 +681,8 @@ trait NodeTrait
     }
 
     /**
+     * @param string|null $table
+     *
      * @return QueryBuilder
      */
     public function newScopedQuery($table = null)
@@ -690,6 +692,7 @@ trait NodeTrait
 
     /**
      * @param mixed $query
+     * @param string|null $table
      *
      * @return mixed
      */
@@ -745,6 +748,8 @@ trait NodeTrait
      * {@inheritdoc}
      *
      * Use `children` key on `$attributes` to create child nodes.
+     *
+     * @param self|null $parent
      */
     public static function create(array $attributes = [], ?self $parent = null)
     {
@@ -1216,6 +1221,8 @@ trait NodeTrait
     }
 
     /**
+     * @param array|null $except
+     *
      * @return \Illuminate\Database\Eloquent\Model
      */
     public function replicate(?array $except = null)
