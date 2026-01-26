@@ -1,6 +1,6 @@
 {
-    "name": "kalnoy/nestedset",
-    "description": "Nested Set Model for Laravel 5.7 and up",
+    "name": "aimeos/laravel-nestedset",
+    "description": "Nested Set Model for Laravel",
     "keywords": [
         "laravel",
         "nested sets",
@@ -13,13 +13,17 @@
         {
             "name": "Alexander Kalnoy",
             "email": "lazychaser@gmail.com"
+        },
+        {
+            "name": "Aimeos",
+            "email": "aimeos@aimeos.org"
         }
     ],
     "require": {
         "php": "^8.0",
-        "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0",
-        "illuminate/database": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0",
-        "illuminate/events": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0"
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/events": "^10.0|^11.0|^12.0"
     },
     "autoload": {
         "psr-4": {
@@ -27,14 +31,11 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "7.*|8.*|9.*|^10.5"
+        "phpunit/phpunit": "^10.5"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "extra": {
-        "branch-alias": {
-            "dev-master": "v5.0.x-dev"
-        },
         "laravel": {
             "providers": [
                 "Kalnoy\\Nestedset\\NestedSetServiceProvider"
