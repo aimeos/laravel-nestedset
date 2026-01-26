@@ -5,16 +5,34 @@
 
 A Laravel package for working with trees in relational databases.
 
+* [Theory](#what-are-nested-sets)
 * [Requirements](#requirements)
 * [Installation](#installation)
-* [Theory](#what-are-nested-sets)
+* [Setup](#setup)
+* [Migration](#migration)
 * [Documentation](#documentation)
+  + [Relationships](#relationships)
   + [Inserting nodes](#inserting-nodes)
   * [Retrieving nodes](#retrieving-nodes)
+  * [Building a tree](#building-a-tree)
   * [Deleting nodes](#deleting-nodes)
+  * [Helper methods](#helper-methods)
   * [Consistency checking & fixing](#checking-consistency)
   * [Scoping](#scoping)
 * [License](#license)
+
+## What are nested sets?
+
+Nested sets or [Nested Set Model](http://en.wikipedia.org/wiki/Nested_set_model) is
+a way to effectively store hierarchical data in a relational table by assigning two
+numbers to each node which span the used numbers of the child nodes. From Wikipedia:
+
+![Nested Set numbering](https://upload.wikimedia.org/wikipedia/commons/b/b5/Clothing-hierarchy-traversal-2.svg)
+
+Nested Sets shows good performance when tree is updated rarely. It is tuned to be fast
+for getting related nodes. It'is ideally suited for building multi-depth menu or
+categories for shop. The data structure isn't suited for trees that must be updated
+often compared to the number of reads.
 
 ## Requirements
 
@@ -30,19 +48,81 @@ To install the package, execute in terminal:
 composer require aimeos/laravel-nestedset
 ```
 
-## What are nested sets?
----------------------
+## Setup
 
-Nested sets or [Nested Set Model](http://en.wikipedia.org/wiki/Nested_set_model) is
-a way to effectively store hierarchical data in a relational table by assigning two
-numbers to each node which span the used numbers of the child nodes. From Wikipedia:
+### The schema
 
-![Nested Set numbering](https://upload.wikimedia.org/wikipedia/commons/b/b5/Clothing-hierarchy-traversal-2.svg)
+For Laravel 5.5 and above users:
 
-Nested Sets shows good performance when tree is updated rarely. It is tuned to be fast
-for getting related nodes. It'is ideally suited for building multi-depth menu or
-categories for shop. The data structure isn't suited for trees that must be updated
-often compared to the number of reads.
+```php
+Schema::create('table', function (Blueprint $table) {
+    ...
+    $table->nestedSet();
+});
+
+// To drop columns
+Schema::table('table', function (Blueprint $table) {
+    $table->dropNestedSet();
+});
+```
+
+### The model
+
+Your model should use `Kalnoy\Nestedset\NodeTrait` trait to enable nested sets:
+
+```php
+use Kalnoy\Nestedset\NodeTrait;
+
+class Foo extends Model {
+    use NodeTrait;
+}
+```
+
+## Migration
+
+### Migrating from other nested set extension
+
+If your previous extension used different set of columns, you just need to override
+following methods on your model class:
+
+```php
+public function getLftName()
+{
+    return 'left';
+}
+
+public function getRgtName()
+{
+    return 'right';
+}
+
+public function getParentIdName()
+{
+    return 'parent';
+}
+
+// Specify parent id attribute mutator
+public function setParentAttribute($value)
+{
+    $this->setParentIdAttribute($value);
+}
+```
+
+### Migrating from basic parent info
+
+If your tree contains `parent_id` info, you need to add two columns to your schema:
+
+```php
+$table->unsignedInteger('_lft');
+$table->unsignedInteger('_rgt');
+```
+
+After [setting up your model](#the-model) you only need to fix the tree to fill
+`_lft` and `_rgt` columns:
+
+```php
+MyModel::fixTree();
+```
 
 ## Documentation
 
@@ -53,19 +133,19 @@ and the node that we are manipulating. It can be a fresh model or one from datab
 
 Node has following relationships that are fully functional and can be eagerly loaded:
 
--   Node belongs to `parent`
--   Node has many `children`
--   Node has many `ancestors`
--   Node has many `descendants`
+* Node belongs to `parent`
+* Node has many `children`
+* Node has many `ancestors`
+* Node has many `descendants`
 
 ### Inserting nodes
 
 Moving and inserting nodes includes several database queries, so it is
 highly recommended to use transactions.
 
-__IMPORTANT!__ Transactions are not started automatically!
+**IMPORTANT:** Transactions are not started automatically!
 
-Another important note is that __structural manipulations are deferred__ until you
+Another important note is that **structural manipulations are deferred** until you
 hit `save` on model (some methods implicitly call `save` and return boolean result
 of the operation).
 
@@ -212,9 +292,9 @@ Node `bar` has no primary key specified, so it will be created.
 `$delete` shows whether to delete nodes that are already exists but not present
 in `$data`. By default, nodes aren't deleted.
 
-##### Rebuilding a subtree
+#### Rebuilding a subtree
 
-As of 4.2.8 you can rebuild a subtree:
+You can rebuild a subtree:
 
 ```php
 Category::rebuildSubtree($root, $data);
@@ -224,7 +304,7 @@ This constraints tree rebuilding to descendants of `$root` node.
 
 ### Retrieving nodes
 
-*In some cases we will use an `$id` variable which is an id of the target node.*
+In some cases we will use an `$id` variable which is an id of the target node.
 
 #### Ancestors and descendants
 
@@ -266,7 +346,7 @@ $categories = Category::with('ancestors')->paginate(30);
 
 // in view for breadcrumbs:
 @foreach($categories as $i => $category)
-    <small>{{ $category->ancestors->count() ? implode(' > ', $category->ancestors->pluck('name')->toArray()) : 'Top Level' }}</small><br>
+    {{ implode(' > ', $category->ancestors->pluck('name')->toArray()) }}
     {{ $category->name }}
 @endforeach
 ```
@@ -341,7 +421,7 @@ To get nodes of specified level, you can apply `having` constraint:
 $result = Category::withDepth()->having('depth', '=', 1)->get();
 ```
 
-__IMPORTANT!__ This will not work in database strict mode
+**IMPORTANT:** This will not work in database strict mode
 
 #### Default order
 
@@ -381,13 +461,12 @@ position.
 
 Various constraints that can be applied to the query builder:
 
--   __whereIsRoot()__ to get only root nodes;
--   __hasParent()__ to get non-root nodes;
--   __whereIsLeaf()__ to get only leaves;
--   __hasChildren()__ to get non-leave nodes;
--   __whereIsAfter($id)__ to get every node (not just siblings) that are after a node
-    with specified id;
--   __whereIsBefore($id)__ to get every node that is before a node with specified id.
+* **whereIsRoot()** to get only root nodes
+* **hasParent()** to get non-root nodes
+* **whereIsLeaf()** to get only leaves
+* **hasChildren()** to get non-leave nodes
+* **whereIsAfter($id)** to get every node (not just siblings) that are after a node with specified id
+* **whereIsBefore($id)** to get every node that is before a node with specified id
 
 Descendants constraints:
 
@@ -411,7 +490,7 @@ $result = Category::whereAncestorOrSelf($id)->get();
 
 `$node` can be either a primary key of the model or model instance.
 
-#### Building a tree
+### Building a tree
 
 After getting a set of nodes, you can convert it to tree. For example:
 
@@ -446,7 +525,7 @@ This will output something like this:
 - Another root
 ```
 
-##### Building flat tree
+#### Building flat tree
 
 Also, you can build a flat tree: a list of nodes where child nodes are immediately
 after parent node. This is helpful when you get nodes with custom order
@@ -466,7 +545,7 @@ Child 2
 Another root
 ```
 
-##### Getting a subtree
+#### Getting a subtree
 
 Sometimes you don't need whole tree to be loaded and just some subtree of specific node.
 It is show in following example:
@@ -492,9 +571,9 @@ To delete a node:
 $node->delete();
 ```
 
-**IMPORTANT!** Any descendant that node has will also be deleted!
+**IMPORTANT:** Any descendant that node has will also be deleted!
 
-**IMPORTANT!** Nodes are required to be deleted as models, **don't** try do delete them using a query like so:
+**IMPORTANT:** Nodes are required to be deleted as models, **don't** try do delete them using a query like so:
 
 ```php
 Category::where('id', '=', $id)->delete();
@@ -541,16 +620,12 @@ $data = Category::countErrors();
 
 It will return an array with following keys:
 
--   `oddness` -- the number of nodes that have wrong set of `lft` and `rgt` values
--   `duplicates` -- the number of nodes that have same `lft` or `rgt` values
--   `wrong_parent` -- the number of nodes that have invalid `parent_id` value that
-    doesn't correspond to `lft` and `rgt` values
--   `missing_parent` -- the number of nodes that have `parent_id` pointing to
-    node that doesn't exists
+* `oddness`: The number of nodes that have wrong set of `lft` and `rgt` values
+* `duplicates`: The number of nodes that have same `lft` or `rgt` values
+* `wrong_parent`: The number of nodes that have invalid `parent_id` value that doesn't correspond to `lft` and `rgt` values
+* `missing_parent`: The number of nodes that have `parent_id` pointing to node that doesn't exists
 
-#### Fixing tree
-
-Since v3.1 tree can now be fixed. Using inheritance info from `parent_id` column,
+A tree can be fixed using inheritance info from `parent_id` column,
 proper `_lft` and `_rgt` values are set for every node.
 
 ```php
@@ -596,112 +671,11 @@ To get scoped query builder using instance:
 $node->newScopedQuery();
 ```
 
-#### Scoping and eager loading
-
 Always use scoped query when eager loading:
 
 ```php
 MenuItem::scoped([ 'menu_id' => 5])->with('descendants')->findOrFail($id); // OK
 MenuItem::with('descendants')->findOrFail($id); // WRONG
-```
-
-### Setting up from scratch
-
-#### The schema
-
-For Laravel 5.5 and above users:
-
-```php
-Schema::create('table', function (Blueprint $table) {
-    ...
-    $table->nestedSet();
-});
-
-// To drop columns
-Schema::table('table', function (Blueprint $table) {
-    $table->dropNestedSet();
-});
-```
-
-For prior Laravel versions:
-
-```php
-...
-use Kalnoy\Nestedset\NestedSet;
-
-Schema::create('table', function (Blueprint $table) {
-    ...
-    NestedSet::columns($table);
-});
-```
-
-To drop columns:
-
-```php
-...
-use Kalnoy\Nestedset\NestedSet;
-
-Schema::table('table', function (Blueprint $table) {
-    NestedSet::dropColumns($table);
-});
-```
-
-#### The model
-
-Your model should use `Kalnoy\Nestedset\NodeTrait` trait to enable nested sets:
-
-```php
-use Kalnoy\Nestedset\NodeTrait;
-
-class Foo extends Model {
-    use NodeTrait;
-}
-```
-
-### Migrating existing data
-
-#### Migrating from other nested set extension
-
-If your previous extension used different set of columns, you just need to override
-following methods on your model class:
-
-```php
-public function getLftName()
-{
-    return 'left';
-}
-
-public function getRgtName()
-{
-    return 'right';
-}
-
-public function getParentIdName()
-{
-    return 'parent';
-}
-
-// Specify parent id attribute mutator
-public function setParentAttribute($value)
-{
-    $this->setParentIdAttribute($value);
-}
-```
-
-#### Migrating from basic parentage info
-
-If your tree contains `parent_id` info, you need to add two columns to your schema:
-
-```php
-$table->unsignedInteger('_lft');
-$table->unsignedInteger('_rgt');
-```
-
-After [setting up your model](#the-model) you only need to fix the tree to fill
-`_lft` and `_rgt` columns:
-
-```php
-MyModel::fixTree();
 ```
 
 ## License
