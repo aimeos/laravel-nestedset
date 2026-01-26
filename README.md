@@ -1,35 +1,36 @@
-[![Build Status](https://travis-ci.org/lazychaser/laravel-nestedset.svg?branch=master)](https://travis-ci.org/lazychaser/laravel-nestedset)
-[![Total Downloads](https://poser.pugx.org/kalnoy/nestedset/downloads.svg)](https://packagist.org/packages/kalnoy/nestedset)
-[![Latest Stable Version](https://poser.pugx.org/kalnoy/nestedset/v/stable.svg)](https://packagist.org/packages/kalnoy/nestedset)
-[![Latest Unstable Version](https://poser.pugx.org/kalnoy/nestedset/v/unstable.svg)](https://packagist.org/packages/kalnoy/nestedset)
-[![License](https://poser.pugx.org/kalnoy/nestedset/license.svg)](https://packagist.org/packages/kalnoy/nestedset)
+<a class="badge" href="https://circleci.com/gh/aimeos/laravel-nestedset"><img src="https://circleci.com/gh/aimeos/laravel-nestedset.svg?style=shield" alt="Build Status" height="20"></a>
+<a class="badge" href="https://packagist.org/packages/aimeos/laravel-nestedset"><img src="https://poser.pugx.org/aimeos/laravel-nestedset/license.svg" alt="License" height="20"></a>
 
-This is a Laravel package for working with trees in relational databases.
+# Laravel tree structure using nested sets
 
-*   **Laravel 12.0** is supported since v6.0.5
-*   **Laravel 11.0** is supported since v6.0.4
-*   **Laravel 10.0** is supported since v6.0.2
-*   **Laravel 9.0** is supported since v6.0.1
-*   **Laravel 8.0** is supported since v6.0.0
-*   **Laravel 5.7, 5.8, 6.0, 7.0** is supported since v5
-*   **Laravel 5.5, 5.6** is supported since v4.3
-*   **Laravel 5.2, 5.3, 5.4** is supported since v4
-*   **Laravel 5.1** is supported in v3
-*   **Laravel 4** is supported in v2
+A Laravel package for working with trees in relational databases.
 
-__Contents:__
+* [Requirements](#requirements)
+* [Installation](#installation)
+* [Theory](#what-are-nested-sets)
+* [Documentation](#documentation)
+  + [Inserting nodes](#inserting-nodes)
+  * [Retrieving nodes](#retrieving-nodes)
+  * [Deleting nodes](#deleting-nodes)
+  * [Consistency checking & fixing](#checking-consistency)
+  * [Scoping](#scoping)
+* [License](#license)
 
-- [Theory](#what-are-nested-sets)
-- [Documentation](#documentation)
-    -   [Inserting nodes](#inserting-nodes)
-    -   [Retrieving nodes](#retrieving-nodes)
-    -   [Deleting nodes](#deleting-nodes)
-    -   [Consistency checking & fixing](#checking-consistency)
-    -   [Scoping](#scoping)
-- [Requirements](#requirements)
-- [Installation](#installation)
+## Requirements
 
-What are nested sets?
+* PHP >= 8.1
+* Laravel >= 10.0
+* MySQL, MariaDB, PostgreSQL, SQLite
+
+## Installation
+
+To install the package, execute in terminal:
+
+```
+composer require aimeos/laravel-nestedset
+```
+
+## What are nested sets?
 ---------------------
 
 Nested sets or [Nested Set Model](http://en.wikipedia.org/wiki/Nested_set_model) is
@@ -41,14 +42,11 @@ a way to effectively store hierarchical data in a relational table. From wikiped
 > attributes. Querying becomes inexpensive: hierarchy membership can be tested by
 > comparing these numbers. Updating requires renumbering and is therefore expensive.
 
-### Applications
-
-NSM shows good performance when tree is updated rarely. It is tuned to be fast for
-getting related nodes. It'is ideally suited for building multi-depth menu or
+Nested Sets shows good performance when tree is updated rarely. It is tuned to be fast
+for getting related nodes. It'is ideally suited for building multi-depth menu or
 categories for shop.
 
-Documentation
--------------
+## Documentation
 
 Suppose that we have a model `Category`; a `$node` variable is an instance of that model
 and the node that we are manipulating. It can be a fresh model or one from database.
@@ -67,7 +65,7 @@ Node has following relationships that are fully functional and can be eagerly lo
 Moving and inserting nodes includes several database queries, so it is
 highly recommended to use transactions.
 
-__IMPORTANT!__ As of v4.2.0 transaction is not automatically started
+__IMPORTANT!__ Transactions are not started automatically!
 
 Another important note is that __structural manipulations are deferred__ until you
 hit `save` on model (some methods implicitly call `save` and return boolean result
@@ -609,24 +607,6 @@ MenuItem::scoped([ 'menu_id' => 5])->with('descendants')->findOrFail($id); // OK
 MenuItem::with('descendants')->findOrFail($id); // WRONG
 ```
 
-Requirements
-------------
-
-- PHP >= 5.4
-- Laravel >= 4.1
-
-It is highly suggested to use database that supports transactions (like MySql's InnoDb)
-to secure a tree from possible corruption.
-
-Installation
-------------
-
-To install the package, in terminal:
-
-```
-composer require kalnoy/nestedset
-```
-
 ### Setting up from scratch
 
 #### The schema
@@ -726,10 +706,9 @@ After [setting up your model](#the-model) you only need to fix the tree to fill
 MyModel::fixTree();
 ```
 
-License
-=======
+## License
 
-Copyright (c) 2017 Alexander Kalnoy
+Copyright (c) 2017 Alexander Kalnoy, Aimeos
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
