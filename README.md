@@ -34,21 +34,19 @@ composer require aimeos/laravel-nestedset
 ---------------------
 
 Nested sets or [Nested Set Model](http://en.wikipedia.org/wiki/Nested_set_model) is
-a way to effectively store hierarchical data in a relational table. From wikipedia:
+a way to effectively store hierarchical data in a relational table by assigning two
+numbers to each node which span the used numbers of the child nodes. From Wikipedia:
 
-> The nested set model is to number the nodes according to a tree traversal,
-> which visits each node twice, assigning numbers in the order of visiting, and
-> at both visits. This leaves two numbers for each node, which are stored as two
-> attributes. Querying becomes inexpensive: hierarchy membership can be tested by
-> comparing these numbers. Updating requires renumbering and is therefore expensive.
+![Nested Set numbering](https://upload.wikimedia.org/wikipedia/commons/b/b5/Clothing-hierarchy-traversal-2.svg)
 
 Nested Sets shows good performance when tree is updated rarely. It is tuned to be fast
 for getting related nodes. It'is ideally suited for building multi-depth menu or
-categories for shop.
+categories for shop. The data structure isn't suited for trees that must be updated
+often compared to the number of reads.
 
 ## Documentation
 
-Suppose that we have a model `Category`; a `$node` variable is an instance of that model
+Suppose that we have a model `Category` and a `$node` variable is an instance of that model
 and the node that we are manipulating. It can be a fresh model or one from database.
 
 ### Relationships
