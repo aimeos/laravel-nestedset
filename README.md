@@ -52,12 +52,25 @@ composer require aimeos/laravel-nestedset
 
 ### The schema
 
-For Laravel 5.5 and above users:
+To extend your table with nested set columns:
 
 ```php
+// Use "id" column of type unsignedInteger
 Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet();
+});
+
+// Use custom id column and unsignedBigInteger id/parent_id columns
+Schema::create('table', function (Blueprint $table) {
+    ...
+    $table->nestedSet('uid', 'unsignedBigInteger');
+});
+
+// Use UUID id/parent_id columns
+Schema::create('table', function (Blueprint $table) {
+    ...
+    $table->nestedSet('id', 'uuid');
 });
 
 // To drop columns
