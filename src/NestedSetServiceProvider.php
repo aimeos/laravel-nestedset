@@ -9,7 +9,7 @@ class NestedSetServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Blueprint::macro('nestedSet', function (string $idColumn, string $type = 'unsignedInteger') {
+        Blueprint::macro('nestedSet', function (string $idColumn = 'id', string $type = 'unsignedInteger') {
             NestedSet::columns($this, $idColumn, $type);
         });
 
