@@ -225,7 +225,7 @@ trait NodeTrait
      *
      * @return BelongsTo
      */
-    public function parent()
+    public function parent() : BelongsTo
     {
         return $this->belongsTo(get_class($this), $this->getParentIdName())
             ->setModel($this);
@@ -236,7 +236,7 @@ trait NodeTrait
      *
      * @return HasMany
      */
-    public function children()
+    public function children() : HasMany
     {
         return $this->hasMany(get_class($this), $this->getParentIdName())
             ->setModel($this);
