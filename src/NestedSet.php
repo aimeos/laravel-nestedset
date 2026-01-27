@@ -36,13 +36,20 @@ class NestedSet
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      */
-    public static function columns(Blueprint $table)
+    public static function columns(Blueprint $table, string $idColumn = 'id', string $type = 'unsignedInteger')
     {
         $table->unsignedInteger(self::LFT)->default(0);
         $table->unsignedInteger(self::RGT)->default(0);
-        $table->unsignedInteger(self::PARENT_ID)->nullable();
+
+        $table->{$type}(self::PARENT_ID)->nullable()->index();
 
         $table->index(static::getDefaultColumns());
+
+        $table->foreign(self::PARENT_ID)
+            ->references($idColumn)
+            ->on($table->getTable())
+            ->onDelete('cascade')
+            ->onUpdate('cascade');
     }
 
     /**
@@ -54,6 +61,7 @@ class NestedSet
     {
         $columns = static::getDefaultColumns();
 
+        $table->dropForeign(self::PARENT_ID);
         $table->dropIndex($columns);
         $table->dropColumn($columns);
     }
