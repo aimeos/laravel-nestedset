@@ -11,7 +11,7 @@ class AncestorsRelation extends BaseRelation
      *
      * @return void
      */
-    public function addConstraints()
+    public function addConstraints(): void
     {
         if ( ! static::$constraints) return;
 
@@ -21,11 +21,11 @@ class AncestorsRelation extends BaseRelation
 
     /**
      * @param Model $model
-     * @param $related
+     * @param Model $related
      *
      * @return bool
      */
-    protected function matches(Model $model, $related)
+    protected function matches(Model $model, Model $related): bool
     {
         return $related->isAncestorOf($model);
     }
@@ -36,20 +36,20 @@ class AncestorsRelation extends BaseRelation
      *
      * @return void
      */
-    protected function addEagerConstraint($query, $model)
+    protected function addEagerConstraint(QueryBuilder $query, Model $model): void
     {
         $query->orWhereAncestorOf($model);
     }
 
     /**
-     * @param $hash
-     * @param $table
-     * @param $lft
-     * @param $rgt
+     * @param string $hash
+     * @param string $table
+     * @param string $lft
+     * @param string $rgt
      *
      * @return string
      */
-    protected function relationExistenceCondition($hash, $table, $lft, $rgt)
+    protected function relationExistenceCondition(string $hash, string $table, string $lft, string $rgt): string
     {
         $key = $this->getBaseQuery()->getGrammar()->wrap($this->parent->getKeyName());
 
