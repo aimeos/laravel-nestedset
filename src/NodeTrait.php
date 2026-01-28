@@ -137,6 +137,7 @@ trait NodeTrait
 
             $this->setLft($cut);
             $this->setRgt($cut + 1);
+            $this->setDepth(0);
 
             return true;
         }
@@ -165,6 +166,7 @@ trait NodeTrait
     protected function actionAppendOrPrepend(self $parent, $prepend = false)
     {
         $parent->refreshNode();
+        $this->setDepth($parent->getDepth() + 1);
 
         $cut = $prepend ? $parent->getLft() + 1 : $parent->getRgt();
 
@@ -203,6 +205,7 @@ trait NodeTrait
     protected function actionBeforeOrAfter(self $node, $after = false)
     {
         $node->refreshNode();
+        $node->setDepth($node->getDepth());
 
         return $this->insertAt($after ? $node->getRgt() + 1 : $node->getLft());
     }
@@ -348,7 +351,7 @@ trait NodeTrait
      */
     public function makeRoot()
     {
-        $this->setParent(null)->dirtyBounds();
+        $this->setParent(null)->setDepth(0)->dirtyBounds();
 
         return $this->setNodeAction('root');
     }
@@ -427,7 +430,7 @@ trait NodeTrait
             ->assertNotDescendant($parent)
             ->assertSameScope($parent);
 
-        $this->setParent($parent)->dirtyBounds();
+        $this->setParent($parent)->setDepth($parent->getDepth() + 1)->dirtyBounds();
 
         return $this->setNodeAction('appendOrPrepend', $parent, $prepend);
     }
@@ -472,7 +475,7 @@ trait NodeTrait
             $this->setParent($node->getRelationValue('parent'));
         }
 
-        $this->dirtyBounds();
+        $this->setDepth($node->getDepth())->dirtyBounds();
 
         return $this->setNodeAction('beforeOrAfter', $node, $after);
     }
@@ -513,7 +516,7 @@ trait NodeTrait
      *
      * @return $this
      */
-    public function rawNode($lft, $rgt, $parentId)
+    public function rawNode(int $lft, int $rgt, $parentId)
     {
         $this->setLft($lft)->setRgt($rgt)->setParentId($parentId);
 
@@ -610,6 +613,7 @@ trait NodeTrait
 
         $height = $this->getNodeHeight();
 
+        $this->setDepth(0);
         $this->setLft($position);
         $this->setRgt($position + $height - 1);
 
@@ -758,7 +762,9 @@ trait NodeTrait
         $instance = new static($attributes);
 
         if ($parent) {
-            $instance->appendToNode($parent);
+            $instance->setDepth($parent->getDepth() + 1)->appendToNode($parent);
+        } else {
+            $instance->setDepth(0);
         }
 
         $instance->save();

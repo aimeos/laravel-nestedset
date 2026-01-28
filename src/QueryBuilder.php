@@ -41,11 +41,8 @@ class QueryBuilder extends Builder
         if ( ! $data && $required) {
             throw new ModelNotFoundException;
         }
-        // Ensure that the result only contains the required attributes in
-        // correct order and nothing else.
-        // The query above might accidentally return more attributes, if
-        // a global scope is defined for the query by the base model.
-        return $data ? [$lftName => $data->$lftName, $rgtName => $data->$rgtName] : [];
+
+        return $data ? (array) $data : [];
     }
 
     /**
@@ -60,7 +57,8 @@ class QueryBuilder extends Builder
      */
     public function getPlainNodeData($id, $required = false)
     {
-        return array_values($this->getNodeData($id, $required));
+        $data = $this->getNodeData($id, $required);
+        return [ $data[$this->model->getLftName()], $data[$this->model->getRgtName()] ];
     }
 
     /**
