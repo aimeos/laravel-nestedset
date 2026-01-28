@@ -586,6 +586,15 @@ $node->delete();
 
 **IMPORTANT:** Any descendant that node has will also be deleted!
 
+To delete multiple nodes:
+
+```php
+$nodes = Model::query()->get();
+foreach ($nodes as $node) {
+    $node->fresh()?->delete(); // Reload the `_lft` & `_rgt` columns using `fresh` method
+}
+```
+
 **IMPORTANT:** Nodes are required to be deleted as models, **don't** try do delete them using a query like so:
 
 ```php
