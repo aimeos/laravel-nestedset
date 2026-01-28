@@ -714,9 +714,9 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $this->getModelClass()::where('id', '=', $this->ids[8])->update(['_lft' => 11]);
 
         $fixed = $this->getModelClass()::fixSubtree($this->getModelClass()::find($this->ids[5]));
-        $this->assertEquals($fixed, 1);
+        $this->assertEquals(1, $fixed);
         $this->assertTreeNotBroken();
-        $this->assertEquals($this->getModelClass()::find($this->ids[8])->getLft(), 12);
+        $this->assertEquals(12, $this->getModelClass()::find($this->ids[8])->getLft());
     }
 
     public function testParentIdDirtiness()

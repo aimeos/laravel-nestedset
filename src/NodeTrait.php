@@ -868,6 +868,16 @@ trait NodeTrait
     }
 
     /**
+     * Get the depth key name.
+     *
+     * @return  string
+     */
+    public function getDepthName()
+    {
+        return NestedSet::DEPTH;
+    }
+
+    /**
      * Get the value of the model's lft key.
      *
      * @return  integer
@@ -895,6 +905,16 @@ trait NodeTrait
     public function getParentId()
     {
         return $this->getAttributeValue($this->getParentIdName());
+    }
+
+    /**
+     * Get the value of the model's depth key.
+     *
+     * @return  integer
+     */
+    public function getDepth()
+    {
+        return $this->getAttributeValue($this->getDepthName());
     }
 
     /**
@@ -1148,6 +1168,18 @@ trait NodeTrait
     }
 
     /**
+     * @param $value
+     *
+     * @return $this
+     */
+    public function setDepth($value)
+    {
+        $this->attributes[$this->getDepthName()] = $value;
+
+        return $this;
+    }
+
+    /**
      * @return $this
      */
     protected function dirtyBounds()
@@ -1229,6 +1261,7 @@ trait NodeTrait
     {
         $defaults = [
             $this->getParentIdName(),
+            $this->getDepthName(),
             $this->getLftName(),
             $this->getRgtName(),
         ];

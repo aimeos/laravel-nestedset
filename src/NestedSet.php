@@ -22,6 +22,11 @@ class NestedSet
     const PARENT_ID = 'parent_id';
 
     /**
+     * The name of default depth column.
+     */
+    const DEPTH = 'depth';
+
+    /**
      * Insert direction.
      */
     const BEFORE = 1;
@@ -38,6 +43,7 @@ class NestedSet
      */
     public static function columns(Blueprint $table, string $idColumn = 'id', string $type = 'unsignedInteger')
     {
+        $table->smallInteger(self::DEPTH)->default(0);
         $table->unsignedInteger(self::LFT)->default(0);
         $table->unsignedInteger(self::RGT)->default(0);
 
@@ -73,7 +79,7 @@ class NestedSet
      */
     public static function getDefaultColumns()
     {
-        return [ static::LFT, static::RGT, static::PARENT_ID ];
+        return [ static::LFT, static::RGT, static::PARENT_ID, static::DEPTH ];
     }
 
     /**
