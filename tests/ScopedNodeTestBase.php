@@ -54,7 +54,14 @@ abstract class ScopedNodeTestBase extends PHPUnit\Framework\TestCase
         Capsule::table($this->getTable())->truncate();
     }
 
-    public function assertTreeNotBroken($menuId)
+    protected function assertOtherScopeNotAffected()
+    {
+        $node = $this->getModelClass()::find($this->ids[3]);
+
+        $this->assertEquals(1, $node->getLft());
+    }
+
+    protected function assertTreeNotBroken($menuId)
     {
         $this->assertFalse($this->getModelClass()::scoped(['menu_id' => $menuId])->isBroken());
     }
@@ -197,21 +204,6 @@ abstract class ScopedNodeTestBase extends PHPUnit\Framework\TestCase
 
         $this->assertOtherScopeNotAffected();
     }
-
-    protected function assertOtherScopeNotAffected()
-    {
-        $node = $this->getModelClass()::find($this->ids[3]);
-
-        $this->assertEquals(1, $node->getLft());
-    }
-
-    // Commented, cause there is no assertion here and otherwise the test is marked as risky in PHPUnit 7.
-    // What's the purpose of this method? @todo: remove/update?
-    /*public function testRebuildsTree()
-    {
-        $data = [];
-        $this->getModelClass()::scoped([ 'menu_id' => 2 ])->rebuildTree($data);
-    }*/
 
     public function testAppendingToAnotherScopeFails()
     {

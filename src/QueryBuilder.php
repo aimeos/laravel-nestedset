@@ -39,10 +39,11 @@ class QueryBuilder extends Builder
     {
         $lftName = $this->model->getLftName();
         $rgtName = $this->model->getRgtName();
+        $depthName = $this->model->getDepthName();
 
         $data = $this->toBase()
             ->where($this->model->getKeyName(), '=', $id)
-            ->first([$lftName, $rgtName]);
+            ->first([$lftName, $rgtName, $depthName]);
 
         if ( ! $data && $required) {
             throw new ModelNotFoundException;
@@ -560,8 +561,10 @@ class QueryBuilder extends Builder
      */
     public function moveNode($key, int $position): int
     {
-        list($lft, $rgt) = $this->model->newNestedSetQuery()
-                                       ->getPlainNodeData($key, true);
+        $data = $this->model->newNestedSetQuery()->getNodeData($key, true);
+        $depth = $data[$this->model->getDepthName()];
+        $lft = $data[$this->model->getLftName()];
+        $rgt = $data[$this->model->getRgtName()];
 
         if ($lft < $position && $position <= $rgt) {
             throw new LogicException('Cannot move node into itself.');
@@ -588,8 +591,14 @@ class QueryBuilder extends Builder
             $distance *= -1;
         }
 
-        $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance');
+        $newDepth = $this->model->newQuery()
+            ->where($this->model->getLftName(), '<', $position)
+            ->where($this->model->getRgtName(), '>=', $position)
+            ->orderBy($this->model->getLftName(), 'desc')
+            ->value($this->model->getDepthName());
 
+        $depth = ($newDepth + 1) - $depth;
+        $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
         $query = $this->toBase()->where(function (Query $inner) use ($boundary) {
@@ -641,6 +650,12 @@ class QueryBuilder extends Builder
             $columns[$col] = $this->columnPatch($grammar->wrap($col), $params);
         }
 
+        // depth update (only for moved subtree)
+        if (($params['depth'] ?? 0) !== 0) {
+            $col = $this->model->getDepthName();
+            $columns[$col] = $this->depthPatch($grammar->wrap($col), $params);
+        }
+
         return $columns;
     }
 
@@ -678,6 +693,30 @@ class QueryBuilder extends Builder
             "when {$col} between {$from} and {$to} then {$col}{$height} ". // Move other nodes
             "else {$col} ".
             "end"
+        );
+    }
+
+    /**
+     * Get depth column patch.
+     *
+     * @param string $col
+     * @param array $params
+     * @return Expression
+     */
+    protected function depthPatch(string $col, array $params): Expression
+    {
+        extract($params);
+
+        if ($depth >= 0) {
+            $depth = '+' . $depth;
+        }
+
+        return new Expression(
+            "case
+                when {$this->model->getLftName()} between {$lft} and {$rgt}
+                then {$col}{$depth}
+                else {$col}
+            end"
         );
     }
 

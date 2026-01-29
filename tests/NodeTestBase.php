@@ -54,6 +54,19 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         Capsule::table($this->getTable())->truncate();
     }
 
+    protected function assertNodeReceivesValidValues($node)
+    {
+        $lft = $node->getLft();
+        $rgt = $node->getRgt();
+        $nodeInDb = $this->findCategory($node->name);
+
+        $this->assertEquals(
+            [$nodeInDb->getLft(), $nodeInDb->getRgt()],
+            [$lft, $rgt],
+            'Node is not synced with database after save.'
+        );
+    }
+
     protected function assertTreeNotBroken($table = null)
     {
         $table = $table ?? $this->getTable();
@@ -88,28 +101,6 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $this->assertEquals(array('errors' => null), $actual, "The tree structure of $table is broken!");
     }
 
-    public function dumpTree($items = null)
-    {
-        if (!$items) $items = $this->getModelClass()::withTrashed()->defaultOrder()->get();
-
-        foreach ($items as $item) {
-            echo PHP_EOL . ($item->trashed() ? '-' : '+') . ' ' . $item->name . " " . $item->getKey() . ' ' . $item->getLft() . " " . $item->getRgt() . ' ' . $item->getParentId();
-        }
-    }
-
-    public function assertNodeReceivesValidValues($node)
-    {
-        $lft = $node->getLft();
-        $rgt = $node->getRgt();
-        $nodeInDb = $this->findCategory($node->name);
-
-        $this->assertEquals(
-            [$nodeInDb->getLft(), $nodeInDb->getRgt()],
-            [$lft, $rgt],
-            'Node is not synced with database after save.'
-        );
-    }
-
     /**
      * @param $name
      *
@@ -125,22 +116,31 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         return $q->whereName($name)->first();
     }
 
+    protected function dumpTree($items = null)
+    {
+        if (!$items) $items = $this->getModelClass()::withTrashed()->defaultOrder()->get();
+
+        foreach ($items as $item) {
+            echo PHP_EOL . ($item->trashed() ? '-' : '+') . ' ' . $item->name . " " . $item->getKey() . ' ' . $item->getLft() . " " . $item->getRgt() . ' ' . $item->getParentId();
+        }
+    }
+
+    protected function nodeValues($node)
+    {
+        return array($node->_lft, $node->_rgt, $node->parent_id);
+    }
+
     public function testTreeNotBroken()
     {
         $this->assertTreeNotBroken();
         $this->assertFalse($this->getModelClass()::isBroken());
     }
 
-    public function nodeValues($node)
-    {
-        return array($node->_lft, $node->_rgt, $node->parent_id);
-    }
-
     public function testGetsNodeData()
     {
         $data = $this->getModelClass()::getNodeData($this->ids[3]);
 
-        $this->assertEquals(['_lft' => 3, '_rgt' => 4], $data);
+        $this->assertEquals(['_lft' => 3, '_rgt' => 4, 'depth' => 2], $data);
     }
 
     public function testGetsPlainNodeData()
@@ -879,23 +879,6 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $this->assertEquals('samsung', $tree[2]->name);
         $this->assertEquals('galaxy', $tree[3]->name);
     }
-
-    // Commented, cause there is no assertion here and otherwise the test is marked as risky in PHPUnit 7.
-    // What's the purpose of this method? @todo: remove/update?
-    /*public function testSeveralNodesModelWork()
-    {
-        $category = new Category;
-
-        $category->name = 'test';
-
-        $category->saveAsRoot();
-
-        $duplicate = new DuplicateCategory;
-
-        $duplicate->name = 'test';
-
-        $duplicate->saveAsRoot();
-    }*/
 
     public function testWhereIsLeaf()
     {
