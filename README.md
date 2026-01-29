@@ -11,14 +11,16 @@ A Laravel package for working with trees in relational databases.
 * [Setup](#setup)
 * [Migration](#migration)
 * [Usage](#usage)
-  + [Relationships](#relationships)
-  + [Inserting nodes](#inserting-nodes)
+  * [Tree safety](#tree-safety)
+  * [Relationships](#relationships)
+  * [Inserting nodes](#inserting-nodes)
   * [Retrieving nodes](#retrieving-nodes)
   * [Building a tree](#building-a-tree)
   * [Deleting nodes](#deleting-nodes)
   * [Helper methods](#helper-methods)
   * [Consistency checking & fixing](#checking-consistency)
   * [Scoping](#scoping)
+  * [Deprecations](#deprections)
 * [License](#license)
 
 ## What are nested sets?
@@ -38,7 +40,7 @@ often compared to the number of reads.
 
 * PHP >= 8.1
 * Laravel >= 10.0
-* MySQL, MariaDB, PostgreSQL, SQLite
+* MySQL, MariaDB, PostgreSQL, SQLite, SQL Server
 
 ## Installation
 
@@ -86,7 +88,7 @@ Your model should use `Kalnoy\Nestedset\NodeTrait` trait to enable nested sets:
 ```php
 use Kalnoy\Nestedset\NodeTrait;
 
-class Foo extends Model {
+class MyModel extends Model {
     use NodeTrait;
 }
 ```
@@ -150,8 +152,32 @@ MyModel::fixTree();
 
 ## Usage
 
-Suppose that we have a model `Category` and a `$node` variable is an instance of that model
+Suppose that we have a model `MyModel` and a `$node` variable is an instance of that model
 and the node that we are manipulating. It can be a fresh model or one from database.
+
+### Tree safety
+
+Inserting, deleting and moving nodes includes several database queries, so it is
+crucial to use transactions and locking to protect against corrupt data structures.
+
+**IMPORTANT:** Transactions alone are not enough!
+
+To guard against concurrent tree updates, use:
+
+```php
+use Illuminate\Support\Facades\Cache;
+
+DB::transaction(function () {
+    $lock = Cache::lock('my_shared_lock_key', 10); // 10 seconds
+
+    if (!$lock->get()) {
+        throw \RuntimeException('Acquiring lock failed');
+    }
+
+    MyModel::find($id)->appendToNode($parent)->save();
+    $lock->release();
+});
+```
 
 ### Relationships
 
@@ -163,11 +189,6 @@ Node has following relationships that are fully functional and can be eagerly lo
 * Node has many `descendants`
 
 ### Inserting nodes
-
-Moving and inserting nodes includes several database queries, so it is
-highly recommended to use transactions.
-
-**IMPORTANT:** Transactions are not started automatically!
 
 Another important note is that **structural manipulations are deferred** until you
 hit `save` on model (some methods implicitly call `save` and return boolean result
@@ -187,11 +208,11 @@ if ($node->save()) {
 When you simply creating a node, it will be appended to the end of the tree:
 
 ```php
-Category::create($attributes); // Saved as root
+MyModel::create($attributes); // Saved as root
 ```
 
 ```php
-$node = new Category($attributes);
+$node = new MyModel($attributes);
 $node->save(); // Saved as root
 ```
 
@@ -213,7 +234,7 @@ The node will be appended to the end of the tree.
 
 If you want to make node a child of other node, you can make it last or first child.
 
-*In following examples, `$parent` is some existing node.*
+Note: In following examples, `$parent` is some existing node.
 
 There are few ways to append a node:
 
@@ -235,7 +256,7 @@ $node->parent_id = $parent->id;
 $node->save();
 
 // #7 Using static method
-Category::create($attributes, $parent);
+MyModel::create($attributes, $parent);
 ```
 
 And only a couple ways to prepend:
@@ -252,8 +273,8 @@ $parent->prependNode($node);
 
 You can make `$node` to be a neighbor of the `$neighbor` node using following methods:
 
-*`$neighbor` must exists, target node can be fresh. If target node exists,
-it will be moved to the new position and parent will be changed if it's required.*
+Note: `$neighbor` must exists, target node can be fresh. If target node exists,
+it will be moved to the new position and parent will be changed if it's required.
 
 ```php
 # Explicit save
@@ -271,7 +292,7 @@ When using static method `create` on node, it checks whether attributes contains
 `children` key. If it does, it creates more nodes recursively.
 
 ```php
-$node = Category::create([
+$node = MyModel::create([
     'name' => 'Foo',
 
     'children' => [
@@ -294,7 +315,7 @@ You can easily rebuild a tree. This is useful for mass-changing the structure of
 the tree.
 
 ```php
-Category::rebuildTree($data, $delete);
+MyModel::rebuildTree($data, $delete);
 ```
 
 `$data` is an array of nodes:
@@ -321,7 +342,7 @@ in `$data`. By default, nodes aren't deleted.
 You can rebuild a subtree:
 
 ```php
-Category::rebuildSubtree($root, $data);
+MyModel::rebuildSubtree($root, $data);
 ```
 
 This constraints tree rebuilding to descendants of `$root` node.
@@ -351,22 +372,22 @@ $node->descendants;
 It is possible to load ancestors and descendants using custom query:
 
 ```php
-$result = Category::ancestorsOf($id);
-$result = Category::ancestorsAndSelf($id);
-$result = Category::descendantsOf($id);
-$result = Category::descendantsAndSelf($id);
+$result = MyModel::ancestorsOf($id);
+$result = MyModel::ancestorsAndSelf($id);
+$result = MyModel::descendantsOf($id);
+$result = MyModel::descendantsAndSelf($id);
 ```
 
 In most cases, you need your ancestors to be ordered by the level:
 
 ```php
-$result = Category::defaultOrder()->ancestorsOf($id);
+$result = MyModel::defaultOrder()->ancestorsOf($id);
 ```
 
 A collection of ancestors can be eagerly loaded:
 
 ```php
-$categories = Category::with('ancestors')->paginate(30);
+$categories = MyModel::with('ancestors')->paginate(30);
 
 // in view for breadcrumbs:
 @foreach($categories as $i => $category)
@@ -413,26 +434,26 @@ $result = $node->prevSiblings()->get();
 
 #### Getting related models from other table
 
-Imagine that each category `has many` goods. I.e. `HasMany` relationship is established.
-How can you get all goods of `$category` and every its descendant? Easy!
+Imagine that each model `has many` goods. I.e. `HasMany` relationship is established.
+How can you get all goods of and every its descendant:
 
 ```php
-// Get ids of descendants
-$categories = $category->descendants()->pluck('id');
+// Get IDs of descendants
+$ids = $model->descendants()->pluck('id');
 
-// Include the id of category itself
-$categories[] = $category->getKey();
+// Include the ID of model itself
+$ids[] = $model->getKey();
 
-// Get goods
-$goods = Goods::whereIn('category_id', $categories)->get();
+// Get related goods
+$goods = Goods::whereIn('mymodel_id', $ids)->get();
 ```
 
-#### Including node depth
+#### Using node depth
 
 If you need to know at which level the node is:
 
 ```php
-$result = Category::find($id);
+$result = MyModel::find($id);
 $depth = $result->getDepth();
 ```
 
@@ -440,7 +461,7 @@ Root node will be at level 0. Children of root nodes will have a level of 1, etc
 To get nodes of specified level, you can apply `where` constraint:
 
 ```php
-$result = Category::where('depth', '=', 1)->get();
+$result = MyModel::where('depth', '=', 1)->get();
 ```
 
 #### Default order
@@ -455,13 +476,13 @@ retrieving ancestors and can be used to order menu items.
 To apply tree order `defaultOrder` method is used:
 
 ```php
-$result = Category::defaultOrder()->get();
+$result = MyModel::defaultOrder()->get();
 ```
 
 You can get nodes in reversed order:
 
 ```php
-$result = Category::reversed()->get();
+$result = MyModel::reversed()->get();
 ```
 
 To shift node up or down inside parent to affect default order:
@@ -491,21 +512,21 @@ Various constraints that can be applied to the query builder:
 Descendants constraints:
 
 ```php
-$result = Category::whereDescendantOf($node)->get();
-$result = Category::whereNotDescendantOf($node)->get();
-$result = Category::orWhereDescendantOf($node)->get();
-$result = Category::orWhereNotDescendantOf($node)->get();
-$result = Category::whereDescendantAndSelf($id)->get();
+$result = MyModel::whereDescendantOf($node)->get();
+$result = MyModel::whereNotDescendantOf($node)->get();
+$result = MyModel::orWhereDescendantOf($node)->get();
+$result = MyModel::orWhereNotDescendantOf($node)->get();
+$result = MyModel::whereDescendantAndSelf($id)->get();
 
 // Include target node into result set
-$result = Category::whereDescendantOrSelf($node)->get();
+$result = MyModel::whereDescendantOrSelf($node)->get();
 ```
 
 Ancestor constraints:
 
 ```php
-$result = Category::whereAncestorOf($node)->get();
-$result = Category::whereAncestorOrSelf($id)->get();
+$result = MyModel::whereAncestorOf($node)->get();
+$result = MyModel::whereAncestorOrSelf($id)->get();
 ```
 
 `$node` can be either a primary key of the model or model instance.
@@ -515,14 +536,14 @@ $result = Category::whereAncestorOrSelf($id)->get();
 After getting a set of nodes, you can convert it to tree. For example:
 
 ```php
-$tree = Category::get()->toTree();
+$tree = MyModel::get()->toTree();
 ```
 
 This will fill `parent` and `children` relationships on every node in the set and
 you can render a tree using recursive algorithm:
 
 ```php
-$nodes = Category::get()->toTree();
+$nodes = MyModel::get()->toTree();
 
 $traverse = function ($categories, $prefix = '-') use (&$traverse) {
     foreach ($categories as $category) {
@@ -552,7 +573,7 @@ after parent node. This is helpful when you get nodes with custom order
 (i.e. alphabetically) and don't want to use recursion to iterate over your nodes.
 
 ```php
-$nodes = Category::get()->toFlatTree();
+$nodes = MyModel::get()->toFlatTree();
 ```
 
 Previous example will output:
@@ -571,7 +592,7 @@ Sometimes you don't need whole tree to be loaded and just some subtree of specif
 It is show in following example:
 
 ```php
-$root = Category::descendantsAndSelf($rootId)->toTree()->first();
+$root = MyModel::descendantsAndSelf($rootId)->toTree()->first();
 ```
 
 In a single query we are getting a root of a subtree and all of its
@@ -580,7 +601,7 @@ descendants that are accessible via `children` relation.
 If you don't need `$root` node itself, do following instead:
 
 ```php
-$tree = Category::descendantsOf($rootId)->toTree($rootId);
+$tree = MyModel::descendantsOf($rootId)->toTree($rootId);
 ```
 
 ### Deleting nodes
@@ -598,14 +619,14 @@ To delete multiple nodes:
 ```php
 $nodes = Model::query()->get();
 foreach ($nodes as $node) {
-    $node->fresh()?->delete(); // Reload the `_lft` & `_rgt` columns using `fresh` method
+    $node->fresh()?->delete(); // Reload the `_lft` & `_rgt` columns using `fresh()` method
 }
 ```
 
 **IMPORTANT:** Nodes are required to be deleted as models, **don't** try do delete them using a query like so:
 
 ```php
-Category::where('id', '=', $id)->delete();
+MyModel::where('id', '=', $id)->delete();
 ```
 
 This will break the tree!
@@ -628,23 +649,23 @@ $bool = $node->isRoot();
 
 Other checks:
 
-*   `$node->isChildOf($other);`
-*   `$node->isAncestorOf($other);`
-*   `$node->isSiblingOf($other);`
-*   `$node->isLeaf()`
+* `$node->isChildOf($other);`
+* `$node->isAncestorOf($other);`
+* `$node->isSiblingOf($other);`
+* `$node->isLeaf()`
 
 ### Checking consistency
 
 You can check whether a tree is broken (i.e. has some structural errors):
 
 ```php
-$bool = Category::isBroken();
+$bool = MyModel::isBroken();
 ```
 
 It is possible to get error statistics:
 
 ```php
-$data = Category::countErrors();
+$data = MyModel::countErrors();
 ```
 
 It will return an array with following keys:
@@ -680,7 +701,7 @@ But now, in order to execute some custom query, you need to provide attributes
 that are used for scoping:
 
 ```php
-MenuItem::scoped([ 'menu_id' => 5 ])->withDepth()->get(); // OK
+MenuItem::scoped([ 'menu_id' => 5 ])->get(); // OK
 MenuItem::descendantsOf($id)->get(); // WRONG: returns nodes from other scope
 MenuItem::scoped([ 'menu_id' => 5 ])->fixTree(); // OK
 ```
@@ -690,8 +711,7 @@ on the attributes of that model:
 
 ```php
 $node = MenuItem::findOrFail($id);
-
-$node->siblings()->withDepth()->get(); // OK
+$node->siblings()->get(); // OK
 ```
 
 To get scoped query builder using instance:
@@ -707,9 +727,15 @@ MenuItem::scoped([ 'menu_id' => 5])->with('descendants')->findOrFail($id); // OK
 MenuItem::with('descendants')->findOrFail($id); // WRONG
 ```
 
+## Deprecations
+
+The following methods are deprecated and will be removed in future versions:
+
+* withDepth(): See using [depth attribute](#using-node-depth) instead
+
 ## License
 
-Copyright (c) 2017 Alexander Kalnoy, Aimeos
+Copyright (c) 2017-2026 Alexander Kalnoy, Aimeos
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
