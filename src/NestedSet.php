@@ -52,15 +52,16 @@ class NestedSet
 
         $table->index(static::getDefaultColumns());
 
-        self::columns2($table);
+        self::columns2($table, $idColumn);
     }
 
     /**
      * Add additional nested set columns to the table.
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
+     * @param string $idColumn
      */
-    public static function columns2(Blueprint $table): void
+    public static function columns2(Blueprint $table, string $idColumn): void
     {
         $table->smallInteger(self::DEPTH)->default(0);
 
