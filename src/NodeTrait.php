@@ -141,7 +141,6 @@ trait NodeTrait
 
             $this->setLft($cut);
             $this->setRgt($cut + 1);
-            $this->setDepth(0);
 
             return true;
         }
@@ -170,7 +169,6 @@ trait NodeTrait
     protected function actionAppendOrPrepend(self $parent, bool $prepend = false): bool
     {
         $parent->refreshNode();
-        $this->setDepth($parent->getDepth() + 1);
 
         $cut = $prepend ? $parent->getLft() + 1 : $parent->getRgt();
 
@@ -206,7 +204,6 @@ trait NodeTrait
     protected function actionBeforeOrAfter(self $node, bool $after = false): bool
     {
         $node->refreshNode();
-        $node->setDepth($node->getDepth());
 
         return $this->insertAt($after ? $node->getRgt() + 1 : $node->getLft());
     }
@@ -428,7 +425,7 @@ trait NodeTrait
             ->assertNotDescendant($parent)
             ->assertSameScope($parent);
 
-        $this->setParent($parent)->setDepth($parent->getDepth() + 1)->dirtyBounds();
+        $this->setParent($parent)->dirtyBounds();
 
         return $this->setNodeAction('appendOrPrepend', $parent, $prepend);
     }
@@ -473,7 +470,7 @@ trait NodeTrait
             $this->setParent($node->getRelationValue('parent'));
         }
 
-        $this->setDepth($node->getDepth())->dirtyBounds();
+        $this->dirtyBounds();
 
         return $this->setNodeAction('beforeOrAfter', $node, $after);
     }
@@ -608,13 +605,14 @@ trait NodeTrait
      */
     protected function insertNode(int $position): bool
     {
+        $height = $this->getNodeHeight();
+        $depth = $this->newNestedSetQuery()->getDepth($position);
+
         $this->newNestedSetQuery()->makeGap($position, 2);
 
-        $height = $this->getNodeHeight();
-
-        $this->setDepth(0);
         $this->setLft($position);
         $this->setRgt($position + $height - 1);
+        $this->setDepth($depth + 1);
 
         return true;
     }

@@ -34,6 +34,8 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         });
 
         Capsule::enableQueryLog();
+
+        date_default_timezone_set('Europe/Berlin');
     }
 
     public function setUp(): void
@@ -45,8 +47,6 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
         $modelClass = $this->getModelClass();
         $modelClass::resetActionsPerformed();
-
-        date_default_timezone_set('America/Denver');
     }
 
     public function tearDown(): void
@@ -127,7 +127,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     protected function nodeValues($node)
     {
-        return array($node->_lft, $node->_rgt, $node->parent_id);
+        return array($node->_lft, $node->_rgt, $node->parent_id, $node->depth);
     }
 
     public function testTreeNotBroken()
@@ -156,7 +156,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $node = new $model(['name' => 'test']);
         $root = $this->getModelClass()::root();
 
-        $accepted = array($root->_rgt, $root->_rgt + 1, $root->id);
+        $accepted = array($root->_rgt, $root->_rgt + 1, $root->id, $root->depth + 1);
 
         $root->appendNode($node);
 
@@ -175,7 +175,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $root->prependNode($node);
 
         $this->assertTrue($node->hasMoved());
-        $this->assertEquals(array($root->_lft + 1, $root->_lft + 2, $root->id), $this->nodeValues($node));
+        $this->assertEquals(array($root->_lft + 1, $root->_lft + 2, $root->id, $root->depth + 1), $this->nodeValues($node));
         $this->assertTreeNotBroken();
         $this->assertTrue($node->isDescendantOf($root));
         $this->assertTrue($root->isAncestorOf($node));
@@ -190,7 +190,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $node->afterNode($target)->save();
 
         $this->assertTrue($node->hasMoved());
-        $this->assertEquals(array($target->_rgt + 1, $target->_rgt + 2, $target->parent->id), $this->nodeValues($node));
+        $this->assertEquals(array($target->_rgt + 1, $target->_rgt + 2, $target->parent->id, $target->depth), $this->nodeValues($node));
         $this->assertTreeNotBroken();
         $this->assertFalse($node->isDirty());
         $this->assertTrue($node->isSiblingOf($target));
@@ -204,7 +204,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $node->beforeNode($target)->save();
 
         $this->assertTrue($node->hasMoved());
-        $this->assertEquals(array($target->_lft, $target->_lft + 1, $target->parent->id), $this->nodeValues($node));
+        $this->assertEquals(array($target->_lft, $target->_lft + 1, $target->parent->id, $target->depth), $this->nodeValues($node));
         $this->assertTreeNotBroken();
     }
 

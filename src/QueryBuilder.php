@@ -552,6 +552,21 @@ class QueryBuilder extends Builder
     }
 
     /**
+     * Get depth of the position in the tree.
+     *
+     * @param int $position
+     * @return int Depth level
+     */
+    public function getDepth(int $position) : int
+    {
+        return (int) $this->model->newQuery()
+            ->where($this->model->getLftName(), '<', $position)
+            ->where($this->model->getRgtName(), '>=', $position)
+            ->orderBy($this->model->getLftName(), 'desc')
+            ->value($this->model->getDepthName());
+    }
+
+    /**
      * Move a node to the new position.
      *
      * @param mixed $key
@@ -591,13 +606,7 @@ class QueryBuilder extends Builder
             $distance *= -1;
         }
 
-        $newDepth = $this->model->newQuery()
-            ->where($this->model->getLftName(), '<', $position)
-            ->where($this->model->getRgtName(), '>=', $position)
-            ->orderBy($this->model->getLftName(), 'desc')
-            ->value($this->model->getDepthName());
-
-        $depth = ($newDepth + 1) - $depth;
+        $depth = ($this->getDepth($position) + 1) - $depth;
         $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
@@ -707,6 +716,9 @@ class QueryBuilder extends Builder
     {
         extract($params);
 
+        /** @var int $lft */
+        /** @var int $rgt */
+        /** @var int $depth */
         if ($depth >= 0) {
             $depth = '+' . $depth;
         }
