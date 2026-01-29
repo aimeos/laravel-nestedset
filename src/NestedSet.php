@@ -22,6 +22,11 @@ class NestedSet
     const PARENT_ID = 'parent_id';
 
     /**
+     * The name of default depth column.
+     */
+    const DEPTH = 'depth';
+
+    /**
      * Insert direction.
      */
     const BEFORE = 1;
@@ -47,6 +52,19 @@ class NestedSet
 
         $table->index(static::getDefaultColumns());
 
+        self::columns2($table, $idColumn);
+    }
+
+    /**
+     * Add additional nested set columns to the table.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     * @param string $idColumn
+     */
+    public static function columns2(Blueprint $table, string $idColumn): void
+    {
+        $table->smallInteger(self::DEPTH)->default(0);
+
         $table->foreign(self::PARENT_ID)
             ->references($idColumn)
             ->on($table->getTable())
@@ -63,9 +81,21 @@ class NestedSet
     {
         $columns = static::getDefaultColumns();
 
-        $table->dropForeign(self::PARENT_ID);
         $table->dropIndex($columns);
         $table->dropColumn($columns);
+
+        self::dropColumns2($table);
+    }
+
+    /**
+     * Drop additional NestedSet columns.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     */
+    public static function dropColumns2(Blueprint $table): void
+    {
+        $table->dropForeign(self::PARENT_ID);
+        $table->dropColumn(self::DEPTH);
     }
 
     /**

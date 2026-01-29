@@ -10,7 +10,7 @@ A Laravel package for working with trees in relational databases.
 * [Installation](#installation)
 * [Setup](#setup)
 * [Migration](#migration)
-* [Documentation](#documentation)
+* [Usage](#usage)
   + [Relationships](#relationships)
   + [Inserting nodes](#inserting-nodes)
   * [Retrieving nodes](#retrieving-nodes)
@@ -93,6 +93,17 @@ class Foo extends Model {
 
 ## Migration
 
+### Migration from lazychaser/nestedset
+
+Create a new migration to update your nested set table:
+
+```php
+Schema::create('table', function (Blueprint $table) {
+    $table->nestedSet2(); // update table schema
+    MyModel::fixTree(); // update tree values
+});
+```
+
 ### Migrating from other nested set extension
 
 If your previous extension used different set of columns, you just need to override
@@ -137,7 +148,7 @@ After [setting up your model](#the-model) you only need to fix the tree to fill
 MyModel::fixTree();
 ```
 
-## Documentation
+## Usage
 
 Suppose that we have a model `Category` and a `$node` variable is an instance of that model
 and the node that we are manipulating. It can be a fresh model or one from database.
@@ -421,20 +432,16 @@ $goods = Goods::whereIn('category_id', $categories)->get();
 If you need to know at which level the node is:
 
 ```php
-$result = Category::withDepth()->find($id);
-
-$depth = $result->depth;
+$result = Category::find($id);
+$depth = $result->getDepth();
 ```
 
 Root node will be at level 0. Children of root nodes will have a level of 1, etc.
-
-To get nodes of specified level, you can apply `having` constraint:
+To get nodes of specified level, you can apply `where` constraint:
 
 ```php
-$result = Category::withDepth()->having('depth', '=', 1)->get();
+$result = Category::where('depth', '=', 1)->get();
 ```
-
-**IMPORTANT:** This will not work in database strict mode
 
 #### Default order
 

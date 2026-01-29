@@ -39,19 +39,17 @@ class QueryBuilder extends Builder
     {
         $lftName = $this->model->getLftName();
         $rgtName = $this->model->getRgtName();
+        $depthName = $this->model->getDepthName();
 
         $data = $this->toBase()
             ->where($this->model->getKeyName(), '=', $id)
-            ->first([$lftName, $rgtName]);
+            ->first([$lftName, $rgtName, $depthName]);
 
         if ( ! $data && $required) {
             throw new ModelNotFoundException;
         }
-        // Ensure that the result only contains the required attributes in
-        // correct order and nothing else.
-        // The query above might accidentally return more attributes, if
-        // a global scope is defined for the query by the base model.
-        return $data ? [$lftName => $data->$lftName, $rgtName => $data->$rgtName] : [];
+
+        return $data ? (array) $data : [];
     }
 
     /**
@@ -66,7 +64,8 @@ class QueryBuilder extends Builder
      */
     public function getPlainNodeData($id, bool $required = false): array
     {
-        return array_values($this->getNodeData($id, $required));
+        $data = $this->getNodeData($id, $required);
+        return [ $data[$this->model->getLftName()], $data[$this->model->getRgtName()] ];
     }
 
     /**
@@ -553,6 +552,21 @@ class QueryBuilder extends Builder
     }
 
     /**
+     * Get depth of the position in the tree.
+     *
+     * @param int $position
+     * @return int Depth level
+     */
+    public function getDepth(int $position) : int
+    {
+        return (int) $this->model->newQuery()
+            ->where($this->model->getLftName(), '<', $position)
+            ->where($this->model->getRgtName(), '>=', $position)
+            ->orderBy($this->model->getLftName(), 'desc')
+            ->value($this->model->getDepthName());
+    }
+
+    /**
      * Move a node to the new position.
      *
      * @param mixed $key
@@ -562,8 +576,10 @@ class QueryBuilder extends Builder
      */
     public function moveNode($key, int $position): int
     {
-        list($lft, $rgt) = $this->model->newNestedSetQuery()
-                                       ->getPlainNodeData($key, true);
+        $data = $this->model->newNestedSetQuery()->getNodeData($key, true);
+        $depth = $data[$this->model->getDepthName()];
+        $lft = $data[$this->model->getLftName()];
+        $rgt = $data[$this->model->getRgtName()];
 
         if ($lft < $position && $position <= $rgt) {
             throw new LogicException('Cannot move node into itself.');
@@ -590,8 +606,8 @@ class QueryBuilder extends Builder
             $distance *= -1;
         }
 
-        $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance');
-
+        $depth = ($this->getDepth($position) + 1) - $depth;
+        $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
         $query = $this->toBase()->where(function (Query $inner) use ($boundary) {
@@ -643,6 +659,12 @@ class QueryBuilder extends Builder
             $columns[$col] = $this->columnPatch($grammar->wrap($col), $params);
         }
 
+        // depth update (only for moved subtree)
+        if (($params['depth'] ?? 0) !== 0) {
+            $col = $this->model->getDepthName();
+            $columns[$col] = $this->depthPatch($grammar->wrap($col), $params);
+        }
+
         return $columns;
     }
 
@@ -680,6 +702,33 @@ class QueryBuilder extends Builder
             "when {$col} between {$from} and {$to} then {$col}{$height} ". // Move other nodes
             "else {$col} ".
             "end"
+        );
+    }
+
+    /**
+     * Get depth column patch.
+     *
+     * @param string $col
+     * @param array $params
+     * @return Expression
+     */
+    protected function depthPatch(string $col, array $params): Expression
+    {
+        extract($params);
+
+        /** @var int $lft */
+        /** @var int $rgt */
+        /** @var int $depth */
+        if ($depth >= 0) {
+            $depth = '+' . $depth;
+        }
+
+        return new Expression(
+            "case
+                when {$this->model->getLftName()} between {$lft} and {$rgt}
+                then {$col}{$depth}
+                else {$col}
+            end"
         );
     }
 
@@ -877,6 +926,7 @@ class QueryBuilder extends Builder
             $this->model->getParentIdName(),
             $this->model->getLftName(),
             $this->model->getRgtName(),
+            $this->model->getDepthName(),
         ], $extraColumns);
 
         $dictionary = $this->model
@@ -910,13 +960,12 @@ class QueryBuilder extends Builder
      */
     protected function fixNodes(array &$dictionary, ?Model $parent = null): int
     {
-        $parentId = $parent ? $parent->getKey() : null;
         $cut = $parent ? $parent->getLft() + 1 : 1;
 
         $updated = [];
         $moved = 0;
 
-        $cut = self::reorderNodes($dictionary, $updated, $parentId, $cut);
+        $cut = self::reorderNodes($dictionary, $updated, $parent, $cut);
 
         // Save nodes that have invalid parent as roots
         while ( ! empty($dictionary)) {
@@ -924,13 +973,13 @@ class QueryBuilder extends Builder
 
             unset($dictionary[key($dictionary)]);
 
-            $cut = self::reorderNodes($dictionary, $updated, $parentId, $cut);
+            $cut = self::reorderNodes($dictionary, $updated, $parent, $cut);
         }
 
         if ($parent && ($grown = $cut - $parent->getRgt()) != 0) {
             $moved = $this->model->newScopedQuery()->makeGap($parent->getRgt() + 1, $grown);
 
-            $updated[] = $parent->rawNode($parent->getLft(), $cut, $parent->getParentId());
+            $updated[] = $parent->rawNode($parent->getLft(), $cut, $parent->getParentId(), $parent->getDepth());
         }
 
         foreach ($updated as $model) {
@@ -949,8 +998,10 @@ class QueryBuilder extends Builder
      * @return int
      * @internal param int $fixed
      */
-    protected static function reorderNodes( array &$dictionary, array &$updated, int|string|null $parentId = null, int $cut = 1): int
+    protected static function reorderNodes( array &$dictionary, array &$updated, Model|null $parent = null, int $cut = 1): int
     {
+        $parentId = $parent?->getKey();
+
         if ( ! isset($dictionary[$parentId])) {
             return $cut;
         }
@@ -959,9 +1010,9 @@ class QueryBuilder extends Builder
         foreach ($dictionary[$parentId] as $model) {
             $lft = $cut;
 
-            $cut = self::reorderNodes($dictionary, $updated, $model->getKey(), $cut + 1);
+            $cut = self::reorderNodes($dictionary, $updated, $model, $cut + 1);
 
-            if ($model->rawNode($lft, $cut, $parentId)->isDirty()) {
+            if ($model->rawNode($lft, $cut, $parentId, $parent?->getDepth() + 1)->isDirty()) {
                 $updated[] = $model;
             }
 
@@ -1056,7 +1107,7 @@ class QueryBuilder extends Builder
                 $model = $this->model->newInstance($this->model->getAttributes());
 
                 // Set some values that will be fixed later
-                $model->rawNode(0, 0, $parentId);
+                $model->rawNode(0, 0, $parentId, 0);
             } else {
                 if ( ! isset($existing[$key = $itemData[$keyName]])) {
                     throw new ModelNotFoundException;
@@ -1065,8 +1116,7 @@ class QueryBuilder extends Builder
                 $model = $existing[$key];
 
                 // Disable any tree actions
-                $model->rawNode($model->getLft(), $model->getRgt(), $parentId);
-
+                $model->rawNode($model->getLft(), $model->getRgt(), $parentId, $model->getDepth());
                 unset($existing[$key]);
             }
 

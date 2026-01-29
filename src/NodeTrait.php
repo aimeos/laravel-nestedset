@@ -346,7 +346,7 @@ trait NodeTrait
      */
     public function makeRoot(): self
     {
-        $this->setParent(null)->dirtyBounds();
+        $this->setParent(null)->setDepth(0)->dirtyBounds();
 
         return $this->setNodeAction('root');
     }
@@ -508,12 +508,13 @@ trait NodeTrait
      * @param int $lft
      * @param int $rgt
      * @param int|string|null $parentId
+     * @param int $depth
      *
      * @return $this
      */
-    public function rawNode(int $lft, int $rgt, int|string|null $parentId)
+    public function rawNode(int $lft, int $rgt, int|string|null $parentId, int|null $depth): self
     {
-        $this->setLft($lft)->setRgt($rgt)->setParentId($parentId);
+        $this->setLft($lft)->setRgt($rgt)->setParentId($parentId)->setDepth($depth);
 
         return $this->setNodeAction('raw');
     }
@@ -604,12 +605,14 @@ trait NodeTrait
      */
     protected function insertNode(int $position): bool
     {
-        $this->newNestedSetQuery()->makeGap($position, 2);
-
         $height = $this->getNodeHeight();
+        $depth = $this->newNestedSetQuery()->getDepth($position);
+
+        $this->newNestedSetQuery()->makeGap($position, 2);
 
         $this->setLft($position);
         $this->setRgt($position + $height - 1);
+        $this->setDepth($depth + 1);
 
         return true;
     }
@@ -756,7 +759,9 @@ trait NodeTrait
         $instance = new static($attributes);
 
         if ($parent) {
-            $instance->appendToNode($parent);
+            $instance->setDepth($parent->getDepth() + 1)->appendToNode($parent);
+        } else {
+            $instance->setDepth(0);
         }
 
         $instance->save();
@@ -866,6 +871,16 @@ trait NodeTrait
     }
 
     /**
+     * Get the depth key name.
+     *
+     * @return  string
+     */
+    public function getDepthName()
+    {
+        return NestedSet::DEPTH;
+    }
+
+    /**
      * Get the value of the model's lft key.
      *
      * @return  int|null
@@ -893,6 +908,16 @@ trait NodeTrait
         public function getParentId()
     {
         return $this->getAttributeValue($this->getParentIdName());
+    }
+
+    /**
+     * Get the value of the model's depth key.
+     *
+     * @return  integer
+     */
+    public function getDepth()
+    {
+        return $this->getAttributeValue($this->getDepthName());
     }
 
     /**
@@ -1138,9 +1163,21 @@ trait NodeTrait
      *
      * @return $this
      */
-    public function setParentId($value): self
+    public function setParentId(int|string|null $value): self
     {
         $this->attributes[$this->getParentIdName()] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param int|null $value
+     *
+     * @return $this
+     */
+    public function setDepth(int|null $value): self
+    {
+        $this->attributes[$this->getDepthName()] = (int) $value;
 
         return $this;
     }
@@ -1227,6 +1264,7 @@ trait NodeTrait
     {
         $defaults = [
             $this->getParentIdName(),
+            $this->getDepthName(),
             $this->getLftName(),
             $this->getRgtName(),
         ];
