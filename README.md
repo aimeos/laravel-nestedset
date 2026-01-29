@@ -99,10 +99,10 @@ Create a new migration to update your nested set table:
 
 ```php
 Schema::create('table', function (Blueprint $table) {
-    $table->nestedSet2);
+    $table->nestedSet2(); // update table schema
+    MyModel::fixTree(); // update tree values
 });
 ```
-
 
 ### Migrating from other nested set extension
 
@@ -432,20 +432,16 @@ $goods = Goods::whereIn('category_id', $categories)->get();
 If you need to know at which level the node is:
 
 ```php
-$result = Category::withDepth()->find($id);
-
-$depth = $result->depth;
+$result = Category::find($id);
+$depth = $result->getDepth();
 ```
 
 Root node will be at level 0. Children of root nodes will have a level of 1, etc.
-
-To get nodes of specified level, you can apply `having` constraint:
+To get nodes of specified level, you can apply `where` constraint:
 
 ```php
-$result = Category::withDepth()->having('depth', '=', 1)->get();
+$result = Category::where('depth', '=', 1)->get();
 ```
-
-**IMPORTANT:** This will not work in database strict mode
 
 #### Default order
 
