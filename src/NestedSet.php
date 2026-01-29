@@ -45,13 +45,24 @@ class NestedSet
      */
     public static function columns(Blueprint $table, string $idColumn = 'id', string $type = 'unsignedInteger'): void
     {
-        $table->smallInteger(self::DEPTH)->default(0);
         $table->unsignedInteger(self::LFT)->default(0);
         $table->unsignedInteger(self::RGT)->default(0);
 
         $table->{$type}(self::PARENT_ID)->nullable()->index();
 
         $table->index(static::getDefaultColumns());
+
+        self::columns2($table);
+    }
+
+    /**
+     * Add additional nested set columns to the table.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     */
+    public static function columns2(Blueprint $table): string
+    {
+        $table->smallInteger(self::DEPTH)->default(0);
 
         $table->foreign(self::PARENT_ID)
             ->references($idColumn)
@@ -69,9 +80,21 @@ class NestedSet
     {
         $columns = static::getDefaultColumns();
 
-        $table->dropForeign(self::PARENT_ID);
         $table->dropIndex($columns);
         $table->dropColumn($columns);
+
+        self::dropColumns2($table);
+    }
+
+    /**
+     * Drop additional NestedSet columns.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     */
+    public static function dropColumns2(Blueprint $table): void
+    {
+        $table->dropForeign(self::PARENT_ID);
+        $table->dropColumn(self::DEPTH);
     }
 
     /**
@@ -81,7 +104,7 @@ class NestedSet
      */
     public static function getDefaultColumns(): array
     {
-        return [ static::LFT, static::RGT, static::PARENT_ID, static::DEPTH ];
+        return [ static::LFT, static::RGT, static::PARENT_ID ];
     }
 
     /**

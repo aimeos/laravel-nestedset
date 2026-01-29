@@ -10,7 +10,7 @@ A Laravel package for working with trees in relational databases.
 * [Installation](#installation)
 * [Setup](#setup)
 * [Migration](#migration)
-* [Documentation](#documentation)
+* [Usage](#usage)
   + [Relationships](#relationships)
   + [Inserting nodes](#inserting-nodes)
   * [Retrieving nodes](#retrieving-nodes)
@@ -93,6 +93,17 @@ class Foo extends Model {
 
 ## Migration
 
+### Migration from lazychaser/nestedset
+
+Create a new migration to update your nested set table:
+
+```php
+Schema::create('table', function (Blueprint $table) {
+    $table->nestedSet2);
+});
+```
+
+
 ### Migrating from other nested set extension
 
 If your previous extension used different set of columns, you just need to override
@@ -137,7 +148,7 @@ After [setting up your model](#the-model) you only need to fix the tree to fill
 MyModel::fixTree();
 ```
 
-## Documentation
+## Usage
 
 Suppose that we have a model `Category` and a `$node` variable is an instance of that model
 and the node that we are manipulating. It can be a fresh model or one from database.
