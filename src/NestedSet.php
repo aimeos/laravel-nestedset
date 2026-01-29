@@ -60,7 +60,7 @@ class NestedSet
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      */
-    public static function columns2(Blueprint $table): string
+    public static function columns2(Blueprint $table): void
     {
         $table->smallInteger(self::DEPTH)->default(0);
 
