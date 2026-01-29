@@ -1,6 +1,6 @@
 <?php
 
-namespace Kalnoy\Nestedset;
+namespace Aimeos\Nestedset;
 
 use Carbon\Carbon;
 use Exception;

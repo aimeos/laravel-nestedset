@@ -1,6 +1,6 @@
 <?php
 
-use Kalnoy\Nestedset\NestedSet;
+use Aimeos\Nestedset\NestedSet;
 
 class NodeUuidTest extends NodeTestBase
 {

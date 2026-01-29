@@ -1,6 +1,6 @@
 <?php
 
-namespace Kalnoy\Nestedset;
+namespace Aimeos\Nestedset;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -165,7 +165,7 @@ class QueryBuilder extends Builder
      * @param mixed $id
      * @param array $columns
      *
-     * @return \Kalnoy\Nestedset\Collection
+     * @return \Aimeos\Nestedset\Collection
      */
     public function ancestorsOf($id, array $columns = array( '*' )): Collection
     {
@@ -176,7 +176,7 @@ class QueryBuilder extends Builder
      * @param $id
      * @param array $columns
      *
-     * @return \Kalnoy\Nestedset\Collection
+     * @return \Aimeos\Nestedset\Collection
      */
     public function ancestorsAndSelf($id, array $columns = [ '*' ]): Collection
     {
