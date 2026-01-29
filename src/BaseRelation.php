@@ -45,11 +45,11 @@ abstract class BaseRelation extends Relation
 
     /**
      * @param Model $model
-     * @param $related
+     * @param Model $related
      *
      * @return bool
      */
-    abstract protected function matches(Model $model, $related);
+    abstract protected function matches(Model $model, Model $related): bool;
 
     /**
      * @param QueryBuilder $query
@@ -57,17 +57,17 @@ abstract class BaseRelation extends Relation
      *
      * @return void
      */
-    abstract protected function addEagerConstraint($query, $model);
+    abstract protected function addEagerConstraint(QueryBuilder $query, Model $model): void;
 
     /**
-     * @param $hash
-     * @param $table
-     * @param $lft
-     * @param $rgt
+     * @param string $hash
+     * @param string $table
+     * @param string $lft
+     * @param string $rgt
      *
      * @return string
      */
-    abstract protected function relationExistenceCondition($hash, $table, $lft, $rgt);
+    abstract protected function relationExistenceCondition(string $hash, string $table, string $lft, string $rgt): string;
 
     /**
      * @param EloquentBuilder $query
@@ -76,9 +76,8 @@ abstract class BaseRelation extends Relation
      *
      * @return mixed
      */
-    public function getRelationExistenceQuery(EloquentBuilder $query, EloquentBuilder $parent,
-                                              $columns = [ '*' ]
-    ) {
+    public function getRelationExistenceQuery(EloquentBuilder $query, EloquentBuilder $parent, $columns = [ '*' ])
+    {
         $query = $this->getParent()->replicate()->newScopedQuery()->select($columns);
 
         $table = $query->getModel()->getTable();
@@ -125,9 +124,9 @@ abstract class BaseRelation extends Relation
     /**
      * Get the results of the relationship.
      *
-     * @return mixed
+     * @return EloquentCollection
      */
-    public function getResults()
+    public function getResults(): EloquentCollection
     {
         return $this->query->get();
     }
@@ -139,7 +138,7 @@ abstract class BaseRelation extends Relation
      *
      * @return void
      */
-    public function addEagerConstraints(array $models)
+    public function addEagerConstraints(array $models): void
     {
         $this->query->whereNested(function (Builder $inner) use ($models) {
             // We will use this query in order to apply constraints to the
@@ -178,7 +177,7 @@ abstract class BaseRelation extends Relation
      *
      * @return Collection
      */
-    protected function matchForModel(Model $model, EloquentCollection $results)
+    protected function matchForModel(Model $model, EloquentCollection $results): EloquentCollection
     {
         $result = $this->related->newCollection();
 
@@ -194,7 +193,7 @@ abstract class BaseRelation extends Relation
     /**
      * Get the plain foreign key.
      *
-     * @return mixed
+     * @return string
      */
     public function getForeignKeyName()
     {
@@ -206,7 +205,7 @@ abstract class BaseRelation extends Relation
      /**
      * Get the Qualify plain foreign key.
      *
-     * @return mixed
+     * @return string
      */
     public function getQualifiedForeignKeyName()
     {

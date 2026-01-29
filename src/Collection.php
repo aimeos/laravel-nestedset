@@ -14,7 +14,7 @@ class Collection extends BaseCollection
      *
      * @return $this
      */
-    public function linkNodes()
+    public function linkNodes(): self
     {
         if ($this->isEmpty()) return $this;
 
@@ -50,10 +50,10 @@ class Collection extends BaseCollection
      *
      * @return Collection
      */
-    public function toTree($root = false)
+    public function toTree($root = false): self
     {
         if ($this->isEmpty()) {
-            return new static;
+            return new self;
         }
 
         $this->linkNodes();
@@ -73,13 +73,13 @@ class Collection extends BaseCollection
             }
         }
 
-        return new static($items);
+        return new self($items);
     }
 
     /**
      * @param mixed $root
      *
-     * @return int
+     * @return int|false
      */
     protected function getRootNodeId($root = false)
     {
@@ -112,11 +112,11 @@ class Collection extends BaseCollection
      *
      * @param bool $root
      *
-     * @return static
+     * @return self
      */
-    public function toFlatTree($root = false)
+    public function toFlatTree(bool $root = false): self
     {
-        $result = new static;
+        $result = new self;
 
         if ($this->isEmpty()) return $result;
 
@@ -129,11 +129,11 @@ class Collection extends BaseCollection
      * Flatten a tree into a non recursive array.
      *
      * @param Collection $groupedNodes
-     * @param mixed $parentId
+     * @param int|string $parentId
      *
      * @return $this
      */
-    protected function flattenTree(self $groupedNodes, $parentId)
+    protected function flattenTree(self $groupedNodes, int|string $parentId): self
     {
         foreach ($groupedNodes->get($parentId, []) as $node) {
             $this->push($node);
