@@ -83,10 +83,10 @@ Schema::table('table', function (Blueprint $table) {
 
 ### The model
 
-Your model should use `Kalnoy\Nestedset\NodeTrait` trait to enable nested sets:
+Your model should use `Aimeos\Nestedset\NodeTrait` trait to enable nested sets:
 
 ```php
-use Kalnoy\Nestedset\NodeTrait;
+use Aimeos\Nestedset\NodeTrait;
 
 class MyModel extends Model {
     use NodeTrait;
@@ -104,6 +104,13 @@ Schema::create('table', function (Blueprint $table) {
     $table->nestedSet2(); // update table schema
     MyModel::fixTree(); // update tree values
 });
+```
+
+Change the trait namespace:
+
+```diff
+- use Kalnoy\Nestedset\NodeTrait;
++ use Aimeos\Nestedset\NodeTrait;
 ```
 
 ### Migrating from other nested set extension

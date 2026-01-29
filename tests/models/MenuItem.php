@@ -3,7 +3,7 @@
 
 class MenuItem extends \Illuminate\Database\Eloquent\Model
 {
-    use \Kalnoy\Nestedset\NodeTrait;
+    use \Aimeos\Nestedset\NodeTrait;
 
     public $timestamps = false;
 

@@ -490,8 +490,8 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $node = $this->findCategory('mobile');
         $nodes = $this->getModelClass()::whereBetween('_lft', array(8, 17))->get();
 
-        $tree1 = \Kalnoy\Nestedset\Collection::make($nodes)->toTree($this->ids[5]);
-        $tree2 = \Kalnoy\Nestedset\Collection::make($nodes)->toTree($node);
+        $tree1 = \Aimeos\Nestedset\Collection::make($nodes)->toTree($this->ids[5]);
+        $tree2 = \Aimeos\Nestedset\Collection::make($nodes)->toTree($node);
 
         $this->assertEquals(4, $tree1->count());
         $this->assertEquals(4, $tree2->count());

@@ -27,7 +27,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Kalnoy\\Nestedset\\": "src/"
+            "Aimeos\\Nestedset\\": "src/"
         }
     },
     "require-dev": {
@@ -39,7 +39,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Kalnoy\\Nestedset\\NestedSetServiceProvider"
+                "Aimeos\\Nestedset\\NestedSetServiceProvider"
             ]
         }
     },

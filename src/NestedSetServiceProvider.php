@@ -1,6 +1,6 @@
 <?php
 
-namespace Kalnoy\Nestedset;
+namespace Aimeos\Nestedset;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\ServiceProvider;
