@@ -3,6 +3,7 @@
 namespace Aimeos\Nestedset;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 class NestedSet
 {
@@ -63,13 +64,19 @@ class NestedSet
      */
     public static function columns2(Blueprint $table, string $idColumn): void
     {
-        $table->smallInteger(self::DEPTH)->default(0);
+        if(!Schema::hasColumn($table->getTable(), self::DEPTH)) {
+             $table->smallInteger(self::DEPTH)->default(0);
+        }
 
-        $table->foreign(self::PARENT_ID)
-            ->references($idColumn)
-            ->on($table->getTable())
-            ->onDelete('cascade')
-            ->onUpdate('cascade');
+        $name = $table->getTable() . '_' . self::PARENT_ID . '_foreign';
+
+        if(!Schema::hasIndex($table->getTable(), $name)) {
+            $table->foreign(self::PARENT_ID, $name)
+                ->references($idColumn)
+                ->on($table->getTable())
+                ->onDelete('cascade')
+                ->onUpdate('cascade');
+        }
     }
 
     /**
@@ -133,5 +140,4 @@ class NestedSet
 
         return false;
     }
-
 }
