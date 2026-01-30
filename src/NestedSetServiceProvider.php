@@ -13,11 +13,12 @@ class NestedSetServiceProvider extends ServiceProvider
             NestedSet::columns($this, $idColumn, $type);
         });
 
-        Blueprint::macro('nestedSet2', function (string $idColumn = 'id') {
-            NestedSet::columns2($this, $idColumn);
+        Blueprint::macro('nestedSetDepth', function (string $idColumn = 'id') {
+            NestedSet::columnsDepth($this, $idColumn);
         });
 
         Blueprint::macro('dropNestedSet', function () {
+            NestedSet::dropColumnsDepth($this);
             NestedSet::dropColumns($this);
         });
     }

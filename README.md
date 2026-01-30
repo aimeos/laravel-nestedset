@@ -54,27 +54,34 @@ composer require aimeos/laravel-nestedset
 
 ### The schema
 
-To extend your table with nested set columns:
+To extend your table with nested set columns in the `up()` method of your migration file:
 
 ```php
 // Use "id" column of type unsignedInteger
 Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet();
+    $table->nestedSetDepth();
 });
 
 // Use custom id column and unsignedBigInteger id/parent_id columns
 Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet('uid', 'unsignedBigInteger');
+    $table->nestedSetDepth('uid');
 });
 
 // Use UUID id/parent_id columns
 Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet('id', 'uuid');
+    $table->nestedSetDepth();
 });
+```
 
+To remove the nested set columns from your table in `down()` use:
+
+```php
 // To drop columns
 Schema::table('table', function (Blueprint $table) {
     $table->dropNestedSet();
@@ -101,9 +108,10 @@ Create a new migration to update your nested set table:
 
 ```php
 Schema::create('table', function (Blueprint $table) {
-    $table->nestedSet2(); // update table schema
-    MyModel::fixTree(); // update tree values
+    $table->nestedSetDepth(); // update table schema
 });
+
+MyModel::fixTree(); // update tree values
 ```
 
 Change the trait namespace:
