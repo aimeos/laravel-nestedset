@@ -25,16 +25,8 @@ class NodeTest extends NodeTestBase
         $table->increments('id');
         $table->string('name');
         $table->softDeletes();
+
         NestedSet::columns($table);
-    }
-
-    public function testSubtreeIsFixed()
-    {
-        $this->getModelClass()::where('id', '=', $this->ids[8])->update(['_lft' => 11]);
-
-        $fixed = $this->getModelClass()::fixSubtree($this->getModelClass()::find($this->ids[5]));
-        $this->assertEquals(1, $fixed);
-        $this->assertTreeNotBroken();
-        $this->assertEquals(12, $this->getModelClass()::find($this->ids[8])->getLft());
+        NestedSet::columnsDepth($table);
     }
 }

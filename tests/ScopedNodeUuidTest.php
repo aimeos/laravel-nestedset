@@ -25,6 +25,8 @@ class ScopedNodeUuidTest extends ScopedNodeTestBase
         $table->uuid('id')->primary();
         $table->unsignedInteger('menu_id');
         $table->string('title')->nullable();
+
         NestedSet::columns($table, 'id', 'uuid');
+        NestedSet::columnsDepth($table);
     }
 }

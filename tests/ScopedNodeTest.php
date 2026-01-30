@@ -25,6 +25,8 @@ class ScopedNodeTest extends ScopedNodeTestBase
         $table->increments('id');
         $table->unsignedInteger('menu_id');
         $table->string('title')->nullable();
+
         NestedSet::columns($table);
+        NestedSet::columnsDepth($table);
     }
 }

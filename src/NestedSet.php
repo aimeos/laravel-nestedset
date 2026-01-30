@@ -3,6 +3,7 @@
 namespace Aimeos\Nestedset;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 class NestedSet
 {
@@ -51,8 +52,6 @@ class NestedSet
         $table->{$type}(self::PARENT_ID)->nullable()->index();
 
         $table->index(static::getDefaultColumns());
-
-        self::columns2($table, $idColumn);
     }
 
     /**
@@ -61,11 +60,13 @@ class NestedSet
      * @param \Illuminate\Database\Schema\Blueprint $table
      * @param string $idColumn
      */
-    public static function columns2(Blueprint $table, string $idColumn): void
+    public static function columnsDepth(Blueprint $table, string $idColumn = 'id'): void
     {
         $table->smallInteger(self::DEPTH)->default(0);
 
-        $table->foreign(self::PARENT_ID)
+        $name = $table->getTable() . '_' . self::PARENT_ID . '_foreign';
+
+        $table->foreign(self::PARENT_ID, $name)
             ->references($idColumn)
             ->on($table->getTable())
             ->onDelete('cascade')
@@ -83,8 +84,6 @@ class NestedSet
 
         $table->dropIndex($columns);
         $table->dropColumn($columns);
-
-        self::dropColumns2($table);
     }
 
     /**
@@ -92,7 +91,7 @@ class NestedSet
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      */
-    public static function dropColumns2(Blueprint $table): void
+    public static function dropColumnsDepth(Blueprint $table): void
     {
         $table->dropForeign(self::PARENT_ID);
         $table->dropColumn(self::DEPTH);
@@ -133,5 +132,4 @@ class NestedSet
 
         return false;
     }
-
 }

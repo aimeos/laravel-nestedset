@@ -778,7 +778,7 @@ class QueryBuilder extends Builder
                 list($lft, $rgt) = $this->wrappedColumns();
 
                 $inner->whereRaw("{$lft} >= {$rgt}")
-                      ->orWhereRaw("({$rgt} - {$lft}) % 2 = 0");
+                    ->orWhereRaw("({$rgt} - {$lft}) % 2 = 0");
             });
     }
 

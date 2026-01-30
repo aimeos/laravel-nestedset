@@ -25,6 +25,8 @@ class NodeUuidTest extends NodeTestBase
         $table->uuid('id')->primary();
         $table->string('name');
         $table->softDeletes();
+
         NestedSet::columns($table, 'id', 'uuid');
+        NestedSet::columnsDepth($table);
     }
 }
