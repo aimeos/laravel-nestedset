@@ -10,17 +10,17 @@ class NodeTest extends NodeTestBase
         $this->categoryData = new CategoryData();
     }
 
-    protected function getTable(): string
+    protected static function getTableName(): string
     {
         return 'categories';
     }
 
-    protected function getModelClass(): string
+    protected static function getModelClass(): string
     {
         return Category::class;
     }
 
-    protected function createTable(\Illuminate\Database\Schema\Blueprint $table): void
+    protected static function createTable(\Illuminate\Database\Schema\Blueprint $table): void
     {
         $table->increments('id');
         $table->string('name');
