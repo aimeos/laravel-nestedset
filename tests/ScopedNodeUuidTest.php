@@ -10,17 +10,17 @@ class ScopedNodeUuidTest extends ScopedNodeTestBase
         $this->menuItemData = new MenuItemData();
     }
 
-    protected function getTable(): string
+    protected static function getTableName(): string
     {
         return 'uuid_menu_items';
     }
 
-    protected function getModelClass(): string
+    protected static function getModelClass(): string
     {
         return MenuItemUuid::class;
     }
 
-    protected function createTable(\Illuminate\Database\Schema\Blueprint $table): void
+    protected static function createTable(\Illuminate\Database\Schema\Blueprint $table): void
     {
         $table->uuid('id')->primary();
         $table->unsignedInteger('menu_id');

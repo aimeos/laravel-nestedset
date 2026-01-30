@@ -2,22 +2,16 @@
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 
-abstract class NodeTestBase extends PHPUnit\Framework\TestCase
+abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 {
-    abstract protected function getTable(): string;
+    abstract protected static function getTableName(): string;
 
-    abstract protected function getModelClass(): string;
+    abstract protected static function getModelClass(): string;
 
-    abstract protected function createTable(\Illuminate\Database\Schema\Blueprint $table): void;
+    abstract protected static function createTable(\Illuminate\Database\Schema\Blueprint $table): void;
 
     protected array $ids = [];
     protected CategoryData $categoryData;
-
-    protected static function getTableName(): string
-    {
-        $testClass = get_called_class();
-        return (new $testClass('dummy'))->getTable();
-    }
 
     public static function setUpBeforeClass(): void
     {
@@ -29,8 +23,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         Capsule::disableQueryLog();
 
         $schema->create($table, function (\Illuminate\Database\Schema\Blueprint $table) {
-            $testClass = get_called_class();
-            (new $testClass('dummy'))->createTable($table);
+            static::createTable($table);
         });
 
         Capsule::enableQueryLog();
@@ -41,17 +34,17 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function setUp(): void
     {
         $this->ids = $this->categoryData->getIds();
-        Capsule::table($this->getTable())->insert($this->categoryData->getData());
+        Capsule::table(static::getTableName())->insert($this->categoryData->getData());
 
         Capsule::flushQueryLog();
 
-        $modelClass = $this->getModelClass();
+        $modelClass = static::getModelClass();
         $modelClass::resetActionsPerformed();
     }
 
     public function tearDown(): void
     {
-        Capsule::table($this->getTable())->truncate();
+        Capsule::table(static::getTableName())->truncate();
     }
 
     protected function assertNodeReceivesValidValues($node)
@@ -69,7 +62,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     protected function assertTreeNotBroken($table = null)
     {
-        $table = $table ?? $this->getTable();
+        $table = $table ?? static::getTableName();
         $checks = array();
 
         $connection = Capsule::connection();
@@ -108,7 +101,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
      */
     protected function findCategory($name, $withTrashed = false)
     {
-        $modelClass = $this->getModelClass();
+        $modelClass = static::getModelClass();
         $q = new $modelClass;
 
         $q = $withTrashed ? $q->withTrashed() : $q->newQuery();
@@ -118,7 +111,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     protected function dumpTree($items = null)
     {
-        if (!$items) $items = $this->getModelClass()::withTrashed()->defaultOrder()->get();
+        if (!$items) $items = static::getModelClass()::withTrashed()->defaultOrder()->get();
 
         foreach ($items as $item) {
             echo PHP_EOL . ($item->trashed() ? '-' : '+') . ' ' . $item->name . " " . $item->getKey() . ' ' . $item->getLft() . " " . $item->getRgt() . ' ' . $item->getParentId();
@@ -133,28 +126,28 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testTreeNotBroken()
     {
         $this->assertTreeNotBroken();
-        $this->assertFalse($this->getModelClass()::isBroken());
+        $this->assertFalse(static::getModelClass()::isBroken());
     }
 
     public function testGetsNodeData()
     {
-        $data = $this->getModelClass()::getNodeData($this->ids[3]);
+        $data = static::getModelClass()::getNodeData($this->ids[3]);
 
         $this->assertEquals(['_lft' => 3, '_rgt' => 4, 'depth' => 2], $data);
     }
 
     public function testGetsPlainNodeData()
     {
-        $data = $this->getModelClass()::getPlainNodeData($this->ids[3]);
+        $data = static::getModelClass()::getPlainNodeData($this->ids[3]);
 
         $this->assertEquals([3, 4], $data);
     }
 
     public function testReceivesValidValuesWhenAppendedTo()
     {
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $node = new $model(['name' => 'test']);
-        $root = $this->getModelClass()::root();
+        $root = static::getModelClass()::root();
 
         $accepted = array($root->_rgt, $root->_rgt + 1, $root->id, $root->depth + 1);
 
@@ -169,8 +162,8 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testReceivesValidValuesWhenPrependedTo()
     {
-        $root = $this->getModelClass()::root();
-        $model = $this->getModelClass();
+        $root = static::getModelClass()::root();
+        $model = static::getModelClass();
         $node = new $model(['name' => 'test']);
         $root->prependNode($node);
 
@@ -185,7 +178,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testReceivesValidValuesWhenInsertedAfter()
     {
         $target = $this->findCategory('apple');
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $node = new $model(['name' => 'test']);
         $node->afterNode($target)->save();
 
@@ -199,7 +192,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testReceivesValidValuesWhenInsertedBefore()
     {
         $target = $this->findCategory('apple');
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $node = new $model(['name' => 'test']);
         $node->beforeNode($target)->save();
 
@@ -262,7 +255,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testWithoutRootWorks()
     {
-        $result = $this->getModelClass()::withoutRoot()->pluck('name');
+        $result = static::getModelClass()::withoutRoot()->pluck('name');
 
         $this->assertNotEquals('store', $result);
     }
@@ -277,14 +270,14 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testGetsAncestorsByStatic()
     {
-        $path = all($this->getModelClass()::ancestorsOf($this->ids[3])->pluck('name'));
+        $path = all(static::getModelClass()::ancestorsOf($this->ids[3])->pluck('name'));
 
         $this->assertEquals(array('store', 'notebooks'), $path);
     }
 
     public function testGetsAncestorsDirect()
     {
-        $path = all($this->getModelClass()::find($this->ids[8])->getAncestors()->pluck('id'));
+        $path = all(static::getModelClass()::find($this->ids[8])->getAncestors()->pluck('id'));
 
         $this->assertEquals(array($this->ids[1], $this->ids[5], $this->ids[7]), $path);
     }
@@ -302,7 +295,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $this->assertEquals(count($descendants), $node->getDescendantCount());
         $this->assertEquals($expected, $descendants);
 
-        $descendants = all($this->getModelClass()::descendantsAndSelf($this->ids[7])->pluck('name'));
+        $descendants = all(static::getModelClass()::descendantsAndSelf($this->ids[7])->pluck('name'));
         $expected = ['samsung', 'galaxy'];
 
         $this->assertEquals($expected, $descendants);
@@ -310,28 +303,28 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testWithDepthWorks()
     {
-        $nodes = all($this->getModelClass()::withDepth()->limit(4)->pluck('depth'));
+        $nodes = all(static::getModelClass()::withDepth()->limit(4)->pluck('depth'));
 
         $this->assertEquals(array(0, 1, 2, 2), $nodes);
     }
 
     public function testWithDepthWithCustomKeyWorks()
     {
-        $node = $this->getModelClass()::whereIsRoot()->withDepth('level')->first();
+        $node = static::getModelClass()::whereIsRoot()->withDepth('level')->first();
 
         $this->assertTrue(isset($node['level']));
     }
 
     public function testWithDepthWorksAlongWithDefaultKeys()
     {
-        $node = $this->getModelClass()::withDepth()->first();
+        $node = static::getModelClass()::withDepth()->first();
 
         $this->assertTrue(isset($node->name));
     }
 
     public function testParentIdAttributeAccessorAppendsNode()
     {
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $node = new $model(array('name' => 'lg', 'parent_id' => $this->ids[5]));
         $node->save();
 
@@ -351,7 +344,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     {
         $this->expectException(Exception::class);
 
-        $modelClass = $this->getModelClass();
+        $modelClass = static::getModelClass();
         $node = new $modelClass();
         $node->save();
     }
@@ -363,16 +356,16 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
         $this->assertTreeNotBroken();
 
-        $nodes = $this->getModelClass()::whereIn('id', array($this->ids[5], $this->ids[6], $this->ids[7], $this->ids[8], $this->ids[9]))->count();
+        $nodes = static::getModelClass()::whereIn('id', array($this->ids[5], $this->ids[6], $this->ids[7], $this->ids[8], $this->ids[9]))->count();
         $this->assertEquals(0, $nodes);
 
-        $root = $this->getModelClass()::root();
+        $root = static::getModelClass()::root();
         $this->assertEquals(8, $root->getRgt());
     }
 
     public function testNodeIsSoftDeleted()
     {
-        $root = $this->getModelClass()::root();
+        $root = static::getModelClass()::root();
 
         $samsung = $this->findCategory('samsung');
         $samsung->delete();
@@ -386,7 +379,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $node = $this->findCategory('mobile');
         $node->delete();
 
-        $nodes = $this->getModelClass()::whereIn('id', array($this->ids[5], $this->ids[6], $this->ids[7], $this->ids[8], $this->ids[9]))->count();
+        $nodes = static::getModelClass()::whereIn('id', array($this->ids[5], $this->ids[6], $this->ids[7], $this->ids[8], $this->ids[9]))->count();
         $this->assertEquals(0, $nodes);
 
         $originalRgt = $root->getRgt();
@@ -418,7 +411,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     {
         $this->expectException(Exception::class);
 
-        $modelClass = $this->getModelClass();
+        $modelClass = static::getModelClass();
         $node = new $modelClass(array('title' => 'Node'));
         $parent = new $modelClass(array('title' => 'Parent'));
 
@@ -461,7 +454,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testToTreeBuildsWithDefaultOrder()
     {
-        $tree = $this->getModelClass()::whereBetween('_lft', array(8, 17))->defaultOrder()->get()->toTree();
+        $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))->defaultOrder()->get()->toTree();
 
         $this->assertEquals(1, count($tree));
 
@@ -472,7 +465,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testToTreeBuildsWithCustomOrder()
     {
-        $tree = $this->getModelClass()::whereBetween('_lft', array(8, 17))
+        $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))
             ->orderBy('title')
             ->get()
             ->toTree();
@@ -488,7 +481,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testToTreeWithSpecifiedRoot()
     {
         $node = $this->findCategory('mobile');
-        $nodes = $this->getModelClass()::whereBetween('_lft', array(8, 17))->get();
+        $nodes = static::getModelClass()::whereBetween('_lft', array(8, 17))->get();
 
         $tree1 = \Aimeos\Nestedset\Collection::make($nodes)->toTree($this->ids[5]);
         $tree2 = \Aimeos\Nestedset\Collection::make($nodes)->toTree($node);
@@ -499,14 +492,14 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testToTreeBuildsWithDefaultOrderAndMultipleRootNodes()
     {
-        $tree = $this->getModelClass()::withoutRoot()->get()->toTree();
+        $tree = static::getModelClass()::withoutRoot()->get()->toTree();
 
         $this->assertEquals(2, count($tree));
     }
 
     public function testToTreeBuildsWithRootItemIdProvided()
     {
-        $tree = $this->getModelClass()::whereBetween('_lft', array(8, 17))->get()->toTree($this->ids[5]);
+        $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))->get()->toTree($this->ids[5]);
 
         $this->assertEquals(4, count($tree));
 
@@ -535,12 +528,12 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     {
         $parent = $this->findCategory('mobile');
 
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $child = new $model(['name' => 'test']);
 
         $parent->appendNode($child);
 
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $child->appendNode(new $model(['name' => 'sub']));
 
         $parent->appendNode(new $model(['name' => 'test2']));
@@ -550,7 +543,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testDefaultCategoryIsSavedAsRoot()
     {
-        $model = $this->getModelClass();
+        $model = static::getModelClass();
         $node = new $model(['name' => 'test']);
         $node->save();
 
@@ -589,19 +582,19 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testCountsTreeErrors()
     {
-        $errors = $this->getModelClass()::countErrors();
+        $errors = static::getModelClass()::countErrors();
 
         $this->assertEquals(['oddness' => 0,
             'duplicates' => 0,
             'wrong_parent' => 0,
             'missing_parent' => 0], $errors);
 
-        $this->getModelClass()::where('id', '=', $this->ids[5])->update(['_lft' => 14]);
-        $this->getModelClass()::where('id', '=', $this->ids[8])->update(['parent_id' => $this->ids[2]]);
-        $this->getModelClass()::where('id', '=', $this->ids[11])->update(['_lft' => 20]);
-        $this->getModelClass()::where('id', '=', $this->ids[4])->update(['parent_id' => $this->ids[24]]);
+        static::getModelClass()::where('id', '=', $this->ids[5])->update(['_lft' => 14]);
+        static::getModelClass()::where('id', '=', $this->ids[8])->update(['parent_id' => $this->ids[2]]);
+        static::getModelClass()::where('id', '=', $this->ids[11])->update(['_lft' => 20]);
+        static::getModelClass()::where('id', '=', $this->ids[4])->update(['parent_id' => $this->ids[24]]);
 
-        $errors = $this->getModelClass()::countErrors();
+        $errors = static::getModelClass()::countErrors();
 
         $this->assertEquals(1, $errors['oddness']);
         $this->assertEquals(2, $errors['duplicates']);
@@ -610,7 +603,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testCreatesNode()
     {
-        $node = $this->getModelClass()::create(['name' => 'test']);
+        $node = static::getModelClass()::create(['name' => 'test']);
 
         $this->assertEquals(23, $node->getLft());
     }
@@ -626,7 +619,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testCreatesTree()
     {
-        $node = $this->getModelClass()::create(
+        $node = static::getModelClass()::create(
             [
                 'name' => 'test',
                 'children' =>
@@ -648,7 +641,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testDescendantsOfNonExistingNode()
     {
-        $modelClass = $this->getModelClass();
+        $modelClass = static::getModelClass();
         $node = new $modelClass();
 
         $this->assertTrue($node->getDescendants()->isEmpty());
@@ -658,13 +651,13 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     {
         $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 
-        $this->getModelClass()::whereDescendantOf($this->ids[124])->get();
+        static::getModelClass()::whereDescendantOf($this->ids[124])->get();
     }
 
     public function testAncestorsByNode()
     {
         $category = $this->findCategory('apple');
-        $ancestors = all($this->getModelClass()::whereAncestorOf($category)->pluck('id'));
+        $ancestors = all(static::getModelClass()::whereAncestorOf($category)->pluck('id'));
 
         $this->assertEquals([$this->ids[1], $this->ids[2]], $ancestors);
     }
@@ -672,7 +665,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testDescendantsByNode()
     {
         $category = $this->findCategory('notebooks');
-        $res = all($this->getModelClass()::whereDescendantOf($category)->pluck('id'));
+        $res = all(static::getModelClass()::whereDescendantOf($category)->pluck('id'));
 
         $this->assertEquals([$this->ids[3], $this->ids[4]], $res);
     }
@@ -690,33 +683,33 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testTreeIsFixed()
     {
-        $this->getModelClass()::where('id', '=', $this->ids[5])->update(['_lft' => 14]);
-        $this->getModelClass()::where('id', '=', $this->ids[8])->update(['parent_id' => $this->ids[2]]);
-        $this->getModelClass()::where('id', '=', $this->ids[11])->update(['_lft' => 20]);
-        $this->getModelClass()::where('id', '=', $this->ids[2])->update(['parent_id' => $this->ids[24]]);
+        static::getModelClass()::where('id', '=', $this->ids[5])->update(['_lft' => 14]);
+        static::getModelClass()::where('id', '=', $this->ids[8])->update(['parent_id' => $this->ids[2]]);
+        static::getModelClass()::where('id', '=', $this->ids[11])->update(['_lft' => 20]);
+        static::getModelClass()::where('id', '=', $this->ids[2])->update(['parent_id' => $this->ids[24]]);
 
-        $fixed = $this->getModelClass()::fixTree();
+        $fixed = static::getModelClass()::fixTree();
 
         $this->assertTrue($fixed > 0);
         $this->assertTreeNotBroken();
 
-        $node = $this->getModelClass()::find($this->ids[8]);
+        $node = static::getModelClass()::find($this->ids[8]);
 
         $this->assertEquals($this->ids[2], $node->getParentId());
 
-        $node = $this->getModelClass()::find($this->ids[2]);
+        $node = static::getModelClass()::find($this->ids[2]);
 
         $this->assertEquals(null, $node->getParentId());
     }
 
     public function testSubtreeIsFixed()
     {
-        $this->getModelClass()::where('id', '=', $this->ids[8])->update(['_lft' => 11]);
+        static::getModelClass()::where('id', '=', $this->ids[8])->update(['_lft' => 11]);
 
-        $fixed = $this->getModelClass()::fixSubtree($this->getModelClass()::find($this->ids[5]));
+        $fixed = static::getModelClass()::fixSubtree(static::getModelClass()::find($this->ids[5]));
         $this->assertEquals(1, $fixed);
         $this->assertTreeNotBroken();
-        $this->assertEquals(12, $this->getModelClass()::find($this->ids[8])->getLft());
+        $this->assertEquals(12, static::getModelClass()::find($this->ids[8])->getLft());
     }
 
     public function testParentIdDirtiness()
@@ -772,7 +765,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testDescendantsEagerlyLoaded()
     {
-        $nodes = $this->getModelClass()::whereIn('id', [$this->ids[2], $this->ids[5]])->get();
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[2], $this->ids[5]])->get();
 
         $nodes->load('descendants');
 
@@ -782,12 +775,12 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testDescendantsRelationQuery()
     {
-        $nodes = $this->getModelClass()::has('descendants')->whereIn('id', [$this->ids[2], $this->ids[3]])->get();
+        $nodes = static::getModelClass()::has('descendants')->whereIn('id', [$this->ids[2], $this->ids[3]])->get();
 
         $this->assertEquals(1, $nodes->count());
         $this->assertEquals($this->ids[2], $nodes->first()->getKey());
 
-        $nodes = $this->getModelClass()::has('descendants', '>', 2)->get();
+        $nodes = static::getModelClass()::has('descendants', '>', 2)->get();
 
         $this->assertEquals(2, $nodes->count());
         $this->assertEquals($this->ids[1], $nodes[0]->getKey());
@@ -796,7 +789,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testParentRelationQuery()
     {
-        $nodes = $this->getModelClass()::has('parent')->whereIn('id', [$this->ids[1], $this->ids[2]]);
+        $nodes = static::getModelClass()::has('parent')->whereIn('id', [$this->ids[1], $this->ids[2]]);
 
         $this->assertEquals(1, $nodes->count());
         $this->assertEquals($this->ids[2], $nodes->first()->getKey());
@@ -804,7 +797,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testRebuildTree()
     {
-        $fixed = $this->getModelClass()::rebuildTree([
+        $fixed = static::getModelClass()::rebuildTree([
             [
                 'id' => $this->ids[1],
                 'children' => [
@@ -819,7 +812,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
         $this->assertTrue($fixed > 0);
         $this->assertTreeNotBroken();
 
-        $node = $this->getModelClass()::find($this->ids[3]);
+        $node = static::getModelClass()::find($this->ids[3]);
 
         $this->assertEquals($this->ids[1], $node->getParentId());
         $this->assertEquals('apple v2', $node->name);
@@ -833,7 +826,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testRebuildSubtree()
     {
-        $fixed = $this->getModelClass()::rebuildSubtree($this->getModelClass()::find($this->ids[7]), [
+        $fixed = static::getModelClass()::rebuildSubtree(static::getModelClass()::find($this->ids[7]), [
             ['name' => 'new node'],
             ['id' => strval($this->ids[8])],
         ]);
@@ -849,16 +842,16 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testRebuildTreeWithDeletion()
     {
-        $this->getModelClass()::rebuildTree([['name' => 'all deleted']], true);
+        static::getModelClass()::rebuildTree([['name' => 'all deleted']], true);
 
         $this->assertTreeNotBroken();
 
-        $nodes = $this->getModelClass()::get();
+        $nodes = static::getModelClass()::get();
 
         $this->assertEquals(1, $nodes->count());
         $this->assertEquals('all deleted', $nodes->first()->name);
 
-        $nodes = $this->getModelClass()::withTrashed()->get();
+        $nodes = static::getModelClass()::withTrashed()->get();
 
         $this->assertTrue($nodes->count() > 1);
     }
@@ -867,7 +860,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     {
         $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
 
-        $this->getModelClass()::rebuildTree([['id' => $this->ids[24]]]);
+        static::getModelClass()::rebuildTree([['id' => $this->ids[24]]]);
     }
 
     public function testFlatTree()
@@ -882,13 +875,13 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testWhereIsLeaf()
     {
-        $categories = $this->getModelClass()::leaves();
+        $categories = static::getModelClass()::leaves();
 
         $this->assertEquals(7, $categories->count());
         $this->assertEquals('apple', $categories->first()->name);
         $this->assertTrue($categories->first()->isLeaf());
 
-        $category = $this->getModelClass()::whereIsRoot()->first();
+        $category = static::getModelClass()::whereIsRoot()->first();
 
         $this->assertFalse($category->isLeaf());
     }
@@ -896,7 +889,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testEagerLoadAncestors()
     {
         $queryLogCount = count(Capsule::connection()->getQueryLog());
-        $categories = $this->getModelClass()::with('ancestors')->orderBy('name')->get();
+        $categories = static::getModelClass()::with('ancestors')->orderBy('name')->get();
 
         $this->assertEquals($queryLogCount + 2, count(Capsule::connection()->getQueryLog()));
 
@@ -931,7 +924,7 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
     public function testLazyLoadAncestors()
     {
         $queryLogCount = count(Capsule::connection()->getQueryLog());
-        $categories = $this->getModelClass()::orderBy('name')->get();
+        $categories = static::getModelClass()::orderBy('name')->get();
 
         $this->assertEquals($queryLogCount + 1, count(Capsule::connection()->getQueryLog()));
 
@@ -967,11 +960,11 @@ abstract class NodeTestBase extends PHPUnit\Framework\TestCase
 
     public function testWhereHasCountQueryForAncestors()
     {
-        $categories = all($this->getModelClass()::has('ancestors', '>', 2)->pluck('name'));
+        $categories = all(static::getModelClass()::has('ancestors', '>', 2)->pluck('name'));
 
         $this->assertEquals(['galaxy'], $categories);
 
-        $categories = all($this->getModelClass()::whereHas('ancestors', function ($query) {
+        $categories = all(static::getModelClass()::whereHas('ancestors', function ($query) {
             $query->where('id', $this->ids[5]);
         })->pluck('name'));
 

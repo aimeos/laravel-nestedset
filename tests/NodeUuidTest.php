@@ -10,17 +10,17 @@ class NodeUuidTest extends NodeTestBase
         $this->categoryData = new CategoryData();
     }
 
-    protected function getTable(): string
+    protected static function getTableName(): string
     {
         return 'uuid_categories';
     }
 
-    protected function getModelClass(): string
+    protected static function getModelClass(): string
     {
         return CategoryUuid::class;
     }
 
-    protected function createTable(\Illuminate\Database\Schema\Blueprint $table): void
+    protected static function createTable(\Illuminate\Database\Schema\Blueprint $table): void
     {
         $table->uuid('id')->primary();
         $table->string('name');

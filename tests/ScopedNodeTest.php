@@ -10,17 +10,17 @@ class ScopedNodeTest extends ScopedNodeTestBase
         $this->menuItemData = new MenuItemData();
     }
 
-    protected function getTable(): string
+    protected static function getTableName(): string
     {
         return 'menu_items';
     }
 
-    protected function getModelClass(): string
+    protected static function getModelClass(): string
     {
         return MenuItem::class;
     }
 
-    protected function createTable(\Illuminate\Database\Schema\Blueprint $table): void
+    protected static function createTable(\Illuminate\Database\Schema\Blueprint $table): void
     {
         $table->increments('id');
         $table->unsignedInteger('menu_id');
