@@ -52,9 +52,7 @@ trait NodeTrait
         static::deleting(function ($model) {
             // We will need fresh data to delete node safely
             $model->refreshNode();
-        });
-
-        static::deleted(function ($model) {
+            // delete descendants before the node is being deleted physically
             $model->deleteDescendants();
         });
 
