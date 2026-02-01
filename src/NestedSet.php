@@ -69,7 +69,7 @@ class NestedSet
         $table->foreign(self::PARENT_ID, $name)
             ->references($idColumn)
             ->on($table->getTable())
-            ->onDelete('no action')
+            ->onDelete('set null')
             ->onUpdate('no action');
     }
 
