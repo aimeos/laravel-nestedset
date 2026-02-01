@@ -63,14 +63,6 @@ class NestedSet
     public static function columnsDepth(Blueprint $table, string $idColumn = 'id'): void
     {
         $table->smallInteger(self::DEPTH)->default(0);
-
-        $name = $table->getTable() . '_' . self::PARENT_ID . '_foreign';
-
-        $table->foreign(self::PARENT_ID, $name)
-            ->references($idColumn)
-            ->on($table->getTable())
-            ->onDelete('set null')
-            ->onUpdate('no action');
     }
 
     /**
@@ -93,7 +85,6 @@ class NestedSet
      */
     public static function dropColumnsDepth(Blueprint $table): void
     {
-        $table->dropForeign($table->getTable() . '_' . self::PARENT_ID . '_foreign');
         $table->dropColumn(self::DEPTH);
     }
 
