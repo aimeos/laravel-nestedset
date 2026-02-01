@@ -69,8 +69,8 @@ class NestedSet
         $table->foreign(self::PARENT_ID, $name)
             ->references($idColumn)
             ->on($table->getTable())
-            ->onDelete('cascade')
-            ->onUpdate('cascade');
+            ->onDelete('no action')
+            ->onUpdate('no action');
     }
 
     /**
@@ -93,7 +93,7 @@ class NestedSet
      */
     public static function dropColumnsDepth(Blueprint $table): void
     {
-        $table->dropForeign(self::PARENT_ID);
+        $table->dropForeign($table->getTable() . '_' . self::PARENT_ID . '_foreign');
         $table->dropColumn(self::DEPTH);
     }
 
