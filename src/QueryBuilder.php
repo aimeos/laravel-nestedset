@@ -651,18 +651,17 @@ class QueryBuilder extends Builder
      */
     protected function patch(array $params): array
     {
-        $grammar = $this->query->getGrammar();
-
         $columns = [];
-
-        foreach ([ $this->model->getLftName(), $this->model->getRgtName() ] as $col) {
-            $columns[$col] = $this->columnPatch($grammar->wrap($col), $params);
-        }
+        $grammar = $this->query->getGrammar();
 
         // depth update (only for moved subtree)
         if (($params['depth'] ?? 0) !== 0) {
             $col = $this->model->getDepthName();
             $columns[$col] = $this->depthPatch($grammar->wrap($col), $params);
+        }
+
+        foreach ([ $this->model->getLftName(), $this->model->getRgtName() ] as $col) {
+            $columns[$col] = $this->columnPatch($grammar->wrap($col), $params);
         }
 
         return $columns;
@@ -696,12 +695,12 @@ class QueryBuilder extends Builder
         /** @var int $to */
         if ($distance >= 0) $distance = '+'.$distance;
 
-        return new Expression(
-            "case ".
-            "when {$col} between {$lft} and {$rgt} then {$col}{$distance} ". // Move the node
-            "when {$col} between {$from} and {$to} then {$col}{$height} ". // Move other nodes
-            "else {$col} ".
-            "end"
+        return new Expression( // first "when" moves the node, second "when" move other nodes
+            "case
+                when {$col} between {$lft} and {$rgt} then {$col}{$distance}
+                when {$col} between {$from} and {$to} then {$col}{$height}
+                else {$col}
+            end"
         );
     }
 
