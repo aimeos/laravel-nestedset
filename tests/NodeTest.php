@@ -4,10 +4,10 @@ use Aimeos\Nestedset\NestedSet;
 
 class NodeTest extends NodeTestBase
 {
-    public function __construct($name = null)
+    public function setUp(): void
     {
-        parent::__construct($name);
         $this->categoryData = new CategoryData();
+        parent::setUp();
     }
 
     protected static function getTableName(): string
