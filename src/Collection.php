@@ -103,9 +103,9 @@ class Collection extends BaseCollection
     /**
      * @param Model|int|string|null $root
      *
-     * @return int|string|false
+     * @return int|string|null
      */
-    protected function getRootNodeId(Model|int|string|null $root = null): int|string|false
+    protected function getRootNodeId(Model|int|string|null $root = null): int|string|null
     {
         if (NestedSet::isNode($root)) {
             return $root->getKey();
@@ -135,11 +135,11 @@ class Collection extends BaseCollection
      * Flatten a tree into a non recursive array.
      *
      * @param Collection $groupedNodes
-     * @param int|string $parentId
+     * @param int|string|null $parentId
      *
      * @return $this
      */
-    protected function flattenTree(self $groupedNodes, int|string $parentId): self
+    protected function flattenTree(self $groupedNodes, int|string|null $parentId): self
     {
         foreach ($groupedNodes->get($parentId, []) as $node) {
             $this->push($node);
