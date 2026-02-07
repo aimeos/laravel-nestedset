@@ -5,6 +5,7 @@ namespace Aimeos\Nestedset;
 use Illuminate\Database\Eloquent\Collection as BaseCollection;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Collection extends BaseCollection
 {
     /**
@@ -38,6 +39,28 @@ class Collection extends BaseCollection
 
         return $this;
     }
+
+
+
+    /**
+     * Build a list of nodes that retain the order that they were pulled from
+     * the database.
+     *
+     * @param bool $root
+     *
+     * @return self
+     */
+    public function toFlatTree(bool $root = false): self
+    {
+        $result = new self;
+
+        if ($this->isEmpty()) return $result;
+
+        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
+
+        return $result->flattenTree($groupedNodes, $this->getRootNodeId($root));
+    }
+
 
     /**
      * Build a tree from a list of nodes. Each item will have set children relation.
@@ -76,6 +99,7 @@ class Collection extends BaseCollection
         return new self($items);
     }
 
+
     /**
      * @param mixed $root
      *
@@ -106,24 +130,6 @@ class Collection extends BaseCollection
         return $root;
     }
 
-    /**
-     * Build a list of nodes that retain the order that they were pulled from
-     * the database.
-     *
-     * @param bool $root
-     *
-     * @return self
-     */
-    public function toFlatTree(bool $root = false): self
-    {
-        $result = new self;
-
-        if ($this->isEmpty()) return $result;
-
-        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
-
-        return $result->flattenTree($groupedNodes, $this->getRootNodeId($root));
-    }
 
     /**
      * Flatten a tree into a non recursive array.

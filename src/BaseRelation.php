@@ -28,6 +28,34 @@ abstract class BaseRelation extends Relation
      */
     protected static $selfJoinCount = 0;
 
+
+    /**
+     * @param QueryBuilder $query
+     * @param Model $model
+     *
+     * @return void
+     */
+    abstract protected function addEagerConstraint(QueryBuilder $query, Model $model): void;
+
+    /**
+     * @param Model $model
+     * @param Model $related
+     *
+     * @return bool
+     */
+    abstract protected function matches(Model $model, Model $related): bool;
+
+    /**
+     * @param string $hash
+     * @param string $table
+     * @param string $lft
+     * @param string $rgt
+     *
+     * @return string
+     */
+    abstract protected function relationExistenceCondition(string $hash, string $table, string $lft, string $rgt): string;
+
+
     /**
      * AncestorsRelation constructor.
      *
@@ -43,31 +71,65 @@ abstract class BaseRelation extends Relation
         parent::__construct($builder, $model);
     }
 
-    /**
-     * @param Model $model
-     * @param Model $related
-     *
-     * @return bool
-     */
-    abstract protected function matches(Model $model, Model $related): bool;
 
     /**
-     * @param QueryBuilder $query
-     * @param Model $model
+     * Set the constraints for an eager load of the relation.
+     *
+     * @param  array $models
      *
      * @return void
      */
-    abstract protected function addEagerConstraint(QueryBuilder $query, Model $model): void;
+    public function addEagerConstraints(array $models): void
+    {
+        $this->query->whereNested(function (Builder $inner) use ($models) {
+            // We will use this query in order to apply constraints to the
+            // base query builder
+            $outer = $this->parent->newQuery()->setQuery($inner);
+
+            foreach ($models as $model) {
+                $this->addEagerConstraint($outer, $model);
+            }
+        });
+    }
+
 
     /**
-     * @param string $hash
-     * @param string $table
-     * @param string $lft
-     * @param string $rgt
+     * Get the plain foreign key.
      *
      * @return string
      */
-    abstract protected function relationExistenceCondition(string $hash, string $table, string $lft, string $rgt): string;
+    public function getForeignKeyName()
+    {
+        // Return a stub value for relation
+        // resolvers which need this function.
+        return NestedSet::PARENT_ID;
+    }
+
+
+    /**
+     * Get the Qualify plain foreign key.
+     *
+     * @return string
+     */
+    public function getQualifiedForeignKeyName()
+    {
+        // Return a stub value for relation
+        // resolvers which need this function.
+        return NestedSet::PARENT_ID;
+    }
+
+
+    /**
+     * Get a relationship join table hash.
+     *
+     * @param  bool $incrementJoinCount
+     * @return string
+     */
+    public function getRelationCountHash($incrementJoinCount = true)
+    {
+        return 'nested_set_'.($incrementJoinCount ? static::$selfJoinCount++ : static::$selfJoinCount);
+    }
+
 
     /**
      * @param EloquentBuilder $query
@@ -97,29 +159,6 @@ abstract class BaseRelation extends Relation
         return $query->whereRaw($condition);
     }
 
-    /**
-     * Initialize the relation on a set of models.
-     *
-     * @param  array $models
-     * @param  string $relation
-     *
-     * @return array
-     */
-    public function initRelation(array $models, $relation)
-    {
-        return $models;
-    }
-
-    /**
-     * Get a relationship join table hash.
-     *
-     * @param  bool $incrementJoinCount
-     * @return string
-     */
-    public function getRelationCountHash($incrementJoinCount = true)
-    {
-        return 'nested_set_'.($incrementJoinCount ? static::$selfJoinCount++ : static::$selfJoinCount);
-    }
 
     /**
      * Get the results of the relationship.
@@ -131,24 +170,18 @@ abstract class BaseRelation extends Relation
         return $this->query->get();
     }
 
+
     /**
-     * Set the constraints for an eager load of the relation.
+     * Initialize the relation on a set of models.
      *
      * @param  array $models
+     * @param  string $relation
      *
-     * @return void
+     * @return array
      */
-    public function addEagerConstraints(array $models): void
+    public function initRelation(array $models, $relation)
     {
-        $this->query->whereNested(function (Builder $inner) use ($models) {
-            // We will use this query in order to apply constraints to the
-            // base query builder
-            $outer = $this->parent->newQuery()->setQuery($inner);
-
-            foreach ($models as $model) {
-                $this->addEagerConstraint($outer, $model);
-            }
-        });
+        return $models;
     }
 
     /**
@@ -188,29 +221,5 @@ abstract class BaseRelation extends Relation
         }
 
         return $result;
-    }
-
-    /**
-     * Get the plain foreign key.
-     *
-     * @return string
-     */
-    public function getForeignKeyName()
-    {
-        // Return a stub value for relation
-        // resolvers which need this function.
-        return NestedSet::PARENT_ID;
-    }
-
-     /**
-     * Get the Qualify plain foreign key.
-     *
-     * @return string
-     */
-    public function getQualifiedForeignKeyName()
-    {
-        // Return a stub value for relation
-        // resolvers which need this function.
-        return NestedSet::PARENT_ID;
     }
 }

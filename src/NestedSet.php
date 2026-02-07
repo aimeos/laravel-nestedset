@@ -37,6 +37,7 @@ class NestedSet
      */
     const AFTER = 2;
 
+
     /**
      * Add default nested set columns to the table. Also create an index.
      *
@@ -54,6 +55,7 @@ class NestedSet
         $table->index(static::getDefaultColumns());
     }
 
+
     /**
      * Add additional nested set columns to the table.
      *
@@ -64,6 +66,7 @@ class NestedSet
     {
         $table->smallInteger(self::DEPTH)->default(0);
     }
+
 
     /**
      * Drop NestedSet columns.
@@ -78,6 +81,7 @@ class NestedSet
         $table->dropColumn($columns);
     }
 
+
     /**
      * Drop additional NestedSet columns.
      *
@@ -88,6 +92,7 @@ class NestedSet
         $table->dropColumn(self::DEPTH);
     }
 
+
     /**
      * Get a list of default columns.
      *
@@ -97,6 +102,7 @@ class NestedSet
     {
         return [ static::LFT, static::RGT, static::PARENT_ID ];
     }
+
 
     /**
      * Replaces instanceof calls for this trait.

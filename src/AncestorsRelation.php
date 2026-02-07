@@ -19,16 +19,6 @@ class AncestorsRelation extends BaseRelation
             ->applyNestedSetScope();
     }
 
-    /**
-     * @param Model $model
-     * @param Model $related
-     *
-     * @return bool
-     */
-    protected function matches(Model $model, Model $related): bool
-    {
-        return $related->isAncestorOf($model);
-    }
 
     /**
      * @param QueryBuilder $query
@@ -40,6 +30,19 @@ class AncestorsRelation extends BaseRelation
     {
         $query->orWhereAncestorOf($model);
     }
+
+
+    /**
+     * @param Model $model
+     * @param Model $related
+     *
+     * @return bool
+     */
+    protected function matches(Model $model, Model $related): bool
+    {
+        return $related->isAncestorOf($model);
+    }
+
 
     /**
      * @param string $hash
