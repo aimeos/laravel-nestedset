@@ -102,7 +102,7 @@ class MyModel extends Model {
 
 ## Migration
 
-### Migration from lazychaser/nestedset
+### Migration from kalnoy/nestedset
 
 Create a new migration to update your nested set table:
 
