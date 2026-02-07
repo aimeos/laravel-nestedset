@@ -4,10 +4,10 @@ use Aimeos\Nestedset\NestedSet;
 
 class ScopedNodeUuidTest extends ScopedNodeTestBase
 {
-    public function __construct($name = null)
+    public function setUp(): void
     {
-        parent::__construct($name);
         $this->menuItemData = new MenuItemData(true);
+        parent::setUp();
     }
 
     protected static function getTableName(): string

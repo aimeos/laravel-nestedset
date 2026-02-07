@@ -5,6 +5,7 @@ namespace Aimeos\Nestedset;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\ServiceProvider;
 
+
 class NestedSetServiceProvider extends ServiceProvider
 {
     public function register()

@@ -5,9 +5,9 @@ namespace Aimeos\Nestedset;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 
+
 class DescendantsRelation extends BaseRelation
 {
-
     /**
      * Set the base constraints on the relation query.
      *
@@ -20,6 +20,7 @@ class DescendantsRelation extends BaseRelation
         $this->query->whereDescendantOf($this->parent)->applyNestedSetScope();
     }
 
+
     /**
      * @param QueryBuilder $query
      * @param Model $model
@@ -28,6 +29,7 @@ class DescendantsRelation extends BaseRelation
     {
         $query->orWhereDescendantOf($model);
     }
+
 
     /**
      * @param Model $model
@@ -39,6 +41,7 @@ class DescendantsRelation extends BaseRelation
     {
         return $related->isDescendantOf($model);
     }
+
 
     /**
      * @param string $hash

@@ -5,6 +5,7 @@ namespace Aimeos\Nestedset;
 use Illuminate\Database\Eloquent\Collection as BaseCollection;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Collection extends BaseCollection
 {
     /**
@@ -39,6 +40,28 @@ class Collection extends BaseCollection
         return $this;
     }
 
+
+
+    /**
+     * Build a list of nodes that retain the order that they were pulled from
+     * the database.
+     *
+     * @param Model|int|string|bool $root
+     *
+     * @return self
+     */
+    public function toFlatTree(Model|int|string|bool $root = false): self
+    {
+        $result = new self;
+
+        if ($this->isEmpty()) return $result;
+
+        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
+
+        return $result->flattenTree($groupedNodes, $this->getRootNodeId($root ?: null));
+    }
+
+
     /**
      * Build a tree from a list of nodes. Each item will have set children relation.
      *
@@ -46,11 +69,11 @@ class Collection extends BaseCollection
      *
      * If `$root` is provided, the tree will contain only descendants of that node.
      *
-     * @param mixed $root
+     * @param Model|int|string|bool $root
      *
      * @return Collection
      */
-    public function toTree($root = false): self
+    public function toTree(Model|int|string|bool $root = false): self
     {
         if ($this->isEmpty()) {
             return new self;
@@ -60,7 +83,7 @@ class Collection extends BaseCollection
 
         $items = [ ];
 
-        $root = $this->getRootNodeId($root);
+        $root = $this->getRootNodeId($root ?: null);
 
         /** @var Model|NodeTrait $node */
         foreach ($this->items as $node) {
@@ -76,18 +99,19 @@ class Collection extends BaseCollection
         return new self($items);
     }
 
+
     /**
-     * @param mixed $root
+     * @param Model|int|string|null $root
      *
-     * @return int|false
+     * @return int|string|false
      */
-    protected function getRootNodeId($root = false)
+    protected function getRootNodeId(Model|int|string|null $root = null): int|string|false
     {
         if (NestedSet::isNode($root)) {
             return $root->getKey();
         }
 
-        if ($root !== false) {
+        if ($root) {
             return $root;
         }
 
@@ -106,24 +130,6 @@ class Collection extends BaseCollection
         return $root;
     }
 
-    /**
-     * Build a list of nodes that retain the order that they were pulled from
-     * the database.
-     *
-     * @param bool $root
-     *
-     * @return self
-     */
-    public function toFlatTree(bool $root = false): self
-    {
-        $result = new self;
-
-        if ($this->isEmpty()) return $result;
-
-        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
-
-        return $result->flattenTree($groupedNodes, $this->getRootNodeId($root));
-    }
 
     /**
      * Flatten a tree into a non recursive array.
