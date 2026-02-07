@@ -4,6 +4,7 @@ namespace Aimeos\Nestedset;
 
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,7 +46,7 @@ trait NodeTrait
     /**
      * Sign on model events.
      */
-    public static function bootNodeTrait()
+    public static function bootNodeTrait(): void
     {
         static::saving(function ($model) {
             return $model->callPendingAction();
@@ -209,12 +210,12 @@ trait NodeTrait
 
 
     /**
-     * @param mixed $query
+     * @param EloquentBuilder|Builder $query
      * @param string|null $table
      *
-     * @return mixed
+     * @return EloquentBuilder|Builder
      */
-    public function applyNestedSetScope($query, ?string $table = null)
+    public function applyNestedSetScope(EloquentBuilder|Builder $query, ?string $table = null): EloquentBuilder|Builder
     {
         if ( ! $scoped = $this->getScopeAttributes()) {
             return $query;
@@ -332,9 +333,9 @@ trait NodeTrait
     /**
      * Get the value of the model's depth key.
      *
-     * @return  integer
+     * @return  int|null
      */
-    public function getDepth()
+    public function getDepth(): int|null
     {
         return $this->getAttributeValue($this->getDepthName());
     }
@@ -450,7 +451,7 @@ trait NodeTrait
      *
      * @return  int|string|null
      */
-        public function getParentId()
+        public function getParentId(): int|string|null
     {
         return $this->getAttributeValue($this->getParentIdName());
     }
@@ -720,7 +721,7 @@ trait NodeTrait
      *
      * @since 2.0
      */
-    public function newEloquentBuilder($query)
+    public function newEloquentBuilder($query): QueryBuilder
     {
         return new QueryBuilder($query);
     }
@@ -947,19 +948,21 @@ trait NodeTrait
      *
      * Behind the scenes node is appended to found parent node.
      *
-     * @param int|string $value
-     *
+     * @param int|string|null $value
+     * @return self
      * @throws Exception If parent node doesn't exists
      */
-    public function setParentIdAttribute($value)
+    public function setParentIdAttribute(int|string|null $value): self
     {
-        if ($this->getParentId() == $value) return;
+        if ($this->getParentId() == $value) return $this;
 
         if ($value) {
             $this->appendToNode($this->newScopedQuery()->findOrFail($value));
         } else {
             $this->makeRoot();
         }
+
+        return $this;
     }
 
 
@@ -1135,7 +1138,7 @@ trait NodeTrait
     /**
      * Call pending action.
      */
-    protected function callPendingAction()
+    protected function callPendingAction(): void
     {
         $this->moved = false;
 
