@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 use InvalidArgumentException;
 
+
 abstract class BaseRelation extends Relation
 {
     /**

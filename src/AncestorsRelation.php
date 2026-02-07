@@ -4,6 +4,7 @@ namespace Aimeos\Nestedset;
 
 use Illuminate\Database\Eloquent\Model;
 
+
 class AncestorsRelation extends BaseRelation
 {
     /**

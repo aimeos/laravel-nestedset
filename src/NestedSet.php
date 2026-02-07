@@ -5,6 +5,7 @@ namespace Aimeos\Nestedset;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+
 class NestedSet
 {
     /**

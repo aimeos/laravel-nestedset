@@ -3,11 +3,10 @@
 namespace Aimeos\Nestedset;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Database\Query\Builder as Query;
-use Illuminate\Database\Query\Builder as BaseQueryBuilder;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Arr;
 use LogicException;
@@ -19,7 +18,7 @@ use LogicException;
  *
  * @method static \Illuminate\Database\Eloquent\Builder<TModel> withTrashed(bool $withTrashed = true)
  */
-class QueryBuilder extends Builder
+class QueryBuilder extends EloquentBuilder
 {
     /**
      * @var NodeTrait|Model
@@ -28,12 +27,12 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
+     * @param int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsAndSelf($id, array $columns = [ '*' ]): Collection
+    public function ancestorsAndSelf(int|string $id, array $columns = [ '*' ]): Collection
     {
         return $this->whereAncestorOf($id, true)->get($columns);
     }
@@ -44,12 +43,12 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsOf($id, array $columns = array( '*' )): Collection
+    public function ancestorsOf(int|string $id, array $columns = array( '*' )): Collection
     {
         return $this->whereAncestorOf($id)->get($columns);
     }
@@ -58,7 +57,7 @@ class QueryBuilder extends Builder
     /**
      * @param string|null $table
      *
-     * @return $this
+     * @return self
      */
     public function applyNestedSetScope(?string $table = null): self
     {
@@ -106,7 +105,7 @@ class QueryBuilder extends Builder
      *
      * @param string $dir
      *
-     * @return $this
+     * @return self
      */
     public function defaultOrder(string $dir = 'asc'): self
     {
@@ -118,12 +117,12 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
+     * @param int|string $id
      * @param array $columns
      *
      * @return Collection
      */
-    public function descendantsAndSelf($id, array $columns = [ '*' ]): Collection
+    public function descendantsAndSelf(int|string $id, array $columns = [ '*' ]): Collection
     {
         return $this->descendantsOf($id, $columns, true);
     }
@@ -134,13 +133,13 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param int|string $id
      * @param array $columns
      * @param bool $andSelf
      *
      * @return Collection
      */
-    public function descendantsOf($id, array $columns = [ '*' ], bool $andSelf = false): Collection
+    public function descendantsOf(int|string $id, array $columns = [ '*' ], bool $andSelf = false): Collection
     {
         try {
             return $this->whereDescendantOf($id, 'and', false, $andSelf)->get($columns);
@@ -217,12 +216,12 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param int|string $id
      * @param bool $required
      *
      * @return array
      */
-    public function getNodeData($id, bool $required = false): array
+    public function getNodeData(int|string $id, bool $required = false): array
     {
         $lftName = $this->model->getLftName();
         $rgtName = $this->model->getRgtName();
@@ -244,12 +243,12 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param int|string $id
      * @param bool $required
      *
      * @return array
      */
-    public function getPlainNodeData($id, bool $required = false): array
+    public function getPlainNodeData(int|string $id, bool $required = false): array
     {
         $data = $this->getNodeData($id, $required);
         return [ $data[$this->model->getLftName()], $data[$this->model->getRgtName()] ];
@@ -275,7 +274,7 @@ class QueryBuilder extends Builder
      * @since 2.0
      * @deprecated since v4.1
      *
-     * @return $this
+     * @return self
      */
     public function hasChildren(): self
     {
@@ -293,7 +292,7 @@ class QueryBuilder extends Builder
      * @since 2.0
      * @deprecated since v4.1
      *
-     * @return $this
+     * @return self
      */
     public function hasParent(): self
     {
@@ -341,7 +340,7 @@ class QueryBuilder extends Builder
     {
         $params = compact('cut', 'height');
 
-        $query = $this->toBase()->whereNested(function (Query $inner) use ($cut) {
+        $query = $this->toBase()->whereNested(function (Builder $inner) use ($cut) {
             $inner->where($this->model->getLftName(), '>=', $cut);
             $inner->orWhere($this->model->getRgtName(), '>=', $cut);
         });
@@ -353,12 +352,12 @@ class QueryBuilder extends Builder
     /**
      * Move a node to the new position.
      *
-     * @param mixed $key
+     * @param int|string $key
      * @param int $position
      *
      * @return int
      */
-    public function moveNode($key, int $position): int
+    public function moveNode(int|string $key, int $position): int
     {
         $data = $this->model->newNestedSetQuery()->getNodeData($key, true);
         $depth = $data[$this->model->getDepthName()];
@@ -394,7 +393,7 @@ class QueryBuilder extends Builder
         $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
-        $query = $this->toBase()->where(function (Query $inner) use ($boundary) {
+        $query = $this->toBase()->where(function (Builder $inner) use ($boundary) {
             $inner->whereBetween($this->model->getLftName(), $boundary);
             $inner->orWhereBetween($this->model->getRgtName(), $boundary);
         });
@@ -404,23 +403,23 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
+     * @param Model|int|string $id
      * @param bool $andSelf
      *
-     * @return $this
+     * @return self
      */
-    public function orWhereAncestorOf($id, bool $andSelf = false): self
+    public function orWhereAncestorOf(Model|int|string $id, bool $andSelf = false): self
     {
         return $this->whereAncestorOf($id, $andSelf, 'or');
     }
 
 
     /**
-     * @param mixed $id
+     * @param Model|int|string $id
      *
-     * @return QueryBuilder
+     * @return self
      */
-    public function orWhereDescendantOf($id): QueryBuilder
+    public function orWhereDescendantOf(Model|int|string $id): self
     {
         return $this->whereDescendantOf($id, 'or');
     }
@@ -433,7 +432,7 @@ class QueryBuilder extends Builder
      *
      * @param array $values
      *
-     * @return $this
+     * @return self
      */
     public function orWhereNodeBetween(array $values): self
     {
@@ -442,11 +441,11 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param mixed $id
+     * @param Model|int|string $id
      *
-     * @return QueryBuilder
+     * @return self
      */
-    public function orWhereNotDescendantOf($id): QueryBuilder
+    public function orWhereNotDescendantOf(Model|int|string $id): self
     {
         return $this->whereDescendantOf($id, 'or', true);
     }
@@ -523,7 +522,7 @@ class QueryBuilder extends Builder
     /**
      * Order by reversed node position.
      *
-     * @return $this
+     * @return self
      */
     public function reversed(): self
     {
@@ -550,13 +549,13 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param Model|int|string $id
      * @param bool $andSelf
      * @param string $boolean
      *
-     * @return $this
+     * @return self
      */
-    public function whereAncestorOf($id, bool $andSelf = false, string $boolean = 'and'): self
+    public function whereAncestorOf(Model|int|string $id, bool $andSelf = false, string $boolean = 'and'): self
     {
         $keyName = $this->model->getTable() . '.' . $this->model->getKeyName();
         $model = null;
@@ -603,11 +602,11 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
+     * @param Model|int|string $id
      *
-     * @return QueryBuilder
+     * @return Builder
      */
-    public function whereAncestorOrSelf($id): QueryBuilder
+    public function whereAncestorOrSelf(Model|int|string $id): self
     {
         return $this->whereAncestorOf($id, true);
     }
@@ -618,16 +617,16 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param Model|int|string $id
      * @param string $boolean
      * @param bool $not
      * @param bool $andSelf
      *
-     * @return $this
+     * @return self
      */
-    public function whereDescendantOf($id, string $boolean = 'and', bool $not = false, bool $andSelf = false): self
+    public function whereDescendantOf(Model|int|string $id, string $boolean = 'and', bool $not = false, bool $andSelf = false): self
     {
-        $this->query->whereNested(function (Query $inner) use ($id, $andSelf, $not) {
+        $this->query->whereNested(function (Builder $inner) use ($id, $andSelf, $not) {
             if (NestedSet::isNode($id)) {
                 $id->applyNestedSetScope($inner);
                 $data = $id->getBounds();
@@ -651,13 +650,13 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
+     * @param Model|int|string $id
      * @param string $boolean
      * @param bool $not
      *
-     * @return $this
+     * @return self
      */
-    public function whereDescendantOrSelf($id, string $boolean = 'and', bool $not = false): self
+    public function whereDescendantOrSelf(Model|int|string $id, string $boolean = 'and', bool $not = false): self
     {
         return $this->whereDescendantOf($id, $boolean, $not, true);
     }
@@ -668,12 +667,12 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param Model|int|string $id
      * @param string $boolean
      *
-     * @return $this
+     * @return self
      */
-    public function whereIsAfter($id, string $boolean = 'and'): self
+    public function whereIsAfter(Model|int|string $id, string $boolean = 'and'): self
     {
         return $this->whereIsBeforeOrAfter($id, '>', $boolean);
     }
@@ -684,19 +683,19 @@ class QueryBuilder extends Builder
      *
      * @since 2.0
      *
-     * @param mixed $id
+     * @param Model|int|string $id
      * @param string $boolean
      *
-     * @return $this
+     * @return self
      */
-    public function whereIsBefore($id, string $boolean = 'and'): self
+    public function whereIsBefore(Model|int|string $id, string $boolean = 'and'): self
     {
         return $this->whereIsBeforeOrAfter($id, '<', $boolean);
     }
 
 
     /**
-     * @return $this
+     * @return self
      */
     public function whereIsLeaf(): self
     {
@@ -709,7 +708,7 @@ class QueryBuilder extends Builder
     /**
      * Scope limits query to select just root node.
      *
-     * @return $this
+     * @return self
      */
     public function whereIsRoot(): self
     {
@@ -727,11 +726,11 @@ class QueryBuilder extends Builder
      * @param array $values
      * @param string $boolean
      * @param bool $not
-     * @param Query $query
+     * @param Builder $query
      *
-     * @return $this
+     * @return self
      */
-    public function whereNodeBetween(array $values, string $boolean = 'and', bool $not = false, ?Query $query = null): self
+    public function whereNodeBetween(array $values, string $boolean = 'and', bool $not = false, ?Builder $query = null): self
     {
         ($query ?? $this->query)->whereBetween($this->model->getTable() . '.' . $this->model->getLftName(), $values, $boolean, $not);
 
@@ -740,11 +739,11 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param mixed $id
+     * @param Model|int|string $id
      *
-     * @return QueryBuilder
+     * @return self
      */
-    public function whereNotDescendantOf($id): QueryBuilder
+    public function whereNotDescendantOf(Model|int|string $id): self
     {
         return $this->whereDescendantOf($id, 'and', true);
     }
@@ -755,7 +754,7 @@ class QueryBuilder extends Builder
      *
      * @param string $as
      *
-     * @return $this
+     * @return self
      */
     public function withDepth(string $as = 'depth'): self
     {
@@ -784,7 +783,7 @@ class QueryBuilder extends Builder
     /**
      * Exclude root node from the result.
      *
-     * @return $this
+     * @return self
      */
     public function withoutRoot(): self
     {
@@ -940,9 +939,9 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @return BaseQueryBuilder
+     * @return Builder
      */
-    protected function getDuplicatesQuery(): BaseQueryBuilder
+    protected function getDuplicatesQuery(): Builder
     {
         $table = $this->wrappedTable();
         $keyName = $this->wrappedKey();
@@ -958,7 +957,7 @@ class QueryBuilder extends Builder
             ->toBase()
             ->from($this->query->raw("{$table} as {$waFirst}, {$table} {$waSecond}"))
             ->whereRaw("{$waFirst}.{$keyName} < {$waSecond}.{$keyName}")
-            ->whereNested(function (BaseQueryBuilder $inner) use ($waFirst, $waSecond) {
+            ->whereNested(function (Builder $inner) use ($waFirst, $waSecond) {
                 list($lft, $rgt) = $this->wrappedColumns();
 
                 $inner->orWhereRaw("{$waFirst}.{$lft}={$waSecond}.{$lft}")
@@ -972,14 +971,14 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @return BaseQueryBuilder
+     * @return Builder
      */
-    protected function getMissingParentQuery(): BaseQueryBuilder
+    protected function getMissingParentQuery(): Builder
     {
         return $this->model
             ->newNestedSetQuery()
             ->toBase()
-            ->whereNested(function (BaseQueryBuilder $inner) {
+            ->whereNested(function (Builder $inner) {
                 $grammar = $this->query->getGrammar();
 
                 $table = $this->wrappedTable();
@@ -1005,14 +1004,14 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @return BaseQueryBuilder
+     * @return Builder
      */
-    protected function getOdnessQuery(): BaseQueryBuilder
+    protected function getOdnessQuery(): Builder
     {
         return $this->model
             ->newNestedSetQuery()
             ->toBase()
-            ->whereNested(function (BaseQueryBuilder $inner) {
+            ->whereNested(function (Builder $inner) {
                 list($lft, $rgt) = $this->wrappedColumns();
 
                 $inner->whereRaw("{$lft} >= {$rgt}")
@@ -1022,9 +1021,9 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @return BaseQueryBuilder
+     * @return Builder
      */
-    protected function getWrongParentQuery(): BaseQueryBuilder
+    protected function getWrongParentQuery(): Builder
     {
         $table = $this->wrappedTable();
         $keyName = $this->wrappedKey();
@@ -1048,7 +1047,7 @@ class QueryBuilder extends Builder
             ->whereRaw("{$waChild}.{$parentIdName}={$waParent}.{$keyName}")
             ->whereRaw("{$waInterm}.{$keyName} <> {$waParent}.{$keyName}")
             ->whereRaw("{$waInterm}.{$keyName} <> {$waChild}.{$keyName}")
-            ->whereNested(function (BaseQueryBuilder $inner) use ($waInterm, $waChild, $waParent) {
+            ->whereNested(function (Builder $inner) use ($waInterm, $waChild, $waParent) {
                 list($lft, $rgt) = $this->wrappedColumns();
 
                 $inner->whereRaw("{$waChild}.{$lft} not between {$waParent}.{$lft} and {$waParent}.{$rgt}")
@@ -1128,13 +1127,13 @@ class QueryBuilder extends Builder
 
 
     /**
-     * @param $id
-     * @param $operator
-     * @param $boolean
+     * @param Model|int|string $id
+     * @param string $operator
+     * @param string $boolean
      *
-     * @return $this
+     * @return self
      */
-    protected function whereIsBeforeOrAfter($id, string $operator, string $boolean): self
+    protected function whereIsBeforeOrAfter(Model|int|string $id, string $operator, string $boolean): self
     {
         if (NestedSet::isNode($id)) {
             $value = '?';
