@@ -1169,7 +1169,8 @@ trait NodeTrait
             ? 'forceDelete'
             : 'delete';
 
-        $this->descendants()->{$method}();
+        // Order by lft desc to delete children before parents when hard deleting (required by MySQL)
+        $this->descendants()->orderByDesc($this->getLftName())->{$method}();
 
         if ($this->hardDeleting()) {
             $height = $rgt - $lft + 1;
