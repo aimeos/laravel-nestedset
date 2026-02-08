@@ -13,7 +13,7 @@ package.
 * [Installation](#installation)
 * [Setup](#setup)
 * [Changelog](#changelog)
-* [Deprecations](#deprections)
+* [Deprecations](#deprecations)
 * [Migration](#migration)
 * [Usage](#usage)
   * [Tree safety](#tree-safety)
@@ -104,7 +104,7 @@ class MyModel extends Model {
 }
 ```
 
-## Changes
+## Changelog
 
 ### 7.x
 
