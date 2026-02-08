@@ -345,21 +345,21 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testAncestorsReturnsAncestorsWithoutNodeItself()
     {
         $node = $this->findCategory('apple');
-        $path = all($node->ancestors()->pluck('name'));
+        $path = $node->ancestors()->pluck('name')->all();
 
         $this->assertEquals(array('store', 'notebooks'), $path);
     }
 
     public function testGetsAncestorsByStatic()
     {
-        $path = all(static::getModelClass()::ancestorsOf($this->ids[3])->pluck('name'));
+        $path = static::getModelClass()::ancestorsOf($this->ids[3])->pluck('name')->all();
 
         $this->assertEquals(array('store', 'notebooks'), $path);
     }
 
     public function testGetsAncestorsDirect()
     {
-        $path = all(static::getModelClass()::find($this->ids[8])->getAncestors()->pluck('id'));
+        $path = static::getModelClass()::find($this->ids[8])->getAncestors()->pluck('id')->all();
 
         $this->assertEquals(array($this->ids[1], $this->ids[5], $this->ids[7]), $path);
     }
@@ -367,17 +367,17 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testDescendants()
     {
         $node = $this->findCategory('mobile');
-        $descendants = all($node->descendants()->pluck('name'));
+        $descendants = $node->descendants()->pluck('name')->all();
         $expected = array('nokia', 'samsung', 'galaxy', 'sony', 'lenovo');
 
         $this->assertEquals($expected, $descendants);
 
-        $descendants = all($node->getDescendants()->pluck('name'));
+        $descendants = $node->getDescendants()->pluck('name')->all();
 
         $this->assertEquals(count($descendants), $node->getDescendantCount());
         $this->assertEquals($expected, $descendants);
 
-        $descendants = all(static::getModelClass()::descendantsAndSelf($this->ids[7])->pluck('name'));
+        $descendants = static::getModelClass()::descendantsAndSelf($this->ids[7])->pluck('name')->all();
         $expected = ['samsung', 'galaxy'];
 
         $this->assertEquals($expected, $descendants);
@@ -385,7 +385,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
     public function testWithDepthWorks()
     {
-        $nodes = all(static::getModelClass()::withDepth()->limit(4)->pluck('depth'));
+        $nodes = static::getModelClass()::withDepth()->limit(4)->pluck('depth')->all();
 
         $this->assertEquals(array(0, 1, 2, 2), $nodes);
     }
@@ -503,17 +503,17 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testSiblings()
     {
         $node = $this->findCategory('samsung');
-        $siblings = all($node->siblings()->pluck('id'));
-        $next = all($node->nextSiblings()->pluck('id'));
-        $prev = all($node->prevSiblings()->pluck('id'));
+        $siblings = $node->siblings()->pluck('id')->all();
+        $next = $node->nextSiblings()->pluck('id')->all();
+        $prev = $node->prevSiblings()->pluck('id')->all();
 
         $this->assertEquals(array($this->ids[6], $this->ids[9], $this->ids[10]), $siblings);
         $this->assertEquals(array($this->ids[9], $this->ids[10]), $next);
         $this->assertEquals(array($this->ids[6]), $prev);
 
-        $siblings = all($node->getSiblings()->pluck('id'));
-        $next = all($node->getNextSiblings()->pluck('id'));
-        $prev = all($node->getPrevSiblings()->pluck('id'));
+        $siblings = $node->getSiblings()->pluck('id')->all();
+        $next = $node->getNextSiblings()->pluck('id')->all();
+        $prev = $node->getPrevSiblings()->pluck('id')->all();
 
         $this->assertEquals(array($this->ids[6], $this->ids[9], $this->ids[10]), $siblings);
         $this->assertEquals(array($this->ids[9], $this->ids[10]), $next);
@@ -739,7 +739,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testAncestorsByNode()
     {
         $category = $this->findCategory('apple');
-        $ancestors = all(static::getModelClass()::whereAncestorOf($category)->pluck('id'));
+        $ancestors = static::getModelClass()::whereAncestorOf($category)->pluck('id')->all();
 
         $this->assertEquals([$this->ids[1], $this->ids[2]], $ancestors);
     }
@@ -747,7 +747,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testDescendantsByNode()
     {
         $category = $this->findCategory('notebooks');
-        $res = all(static::getModelClass()::whereDescendantOf($category)->pluck('id'));
+        $res = static::getModelClass()::whereDescendantOf($category)->pluck('id')->all();
 
         $this->assertEquals([$this->ids[3], $this->ids[4]], $res);
     }
@@ -1042,13 +1042,13 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
     public function testWhereHasCountQueryForAncestors()
     {
-        $categories = all(static::getModelClass()::has('ancestors', '>', 2)->pluck('name'));
+        $categories = static::getModelClass()::has('ancestors', '>', 2)->pluck('name')->all();
 
         $this->assertEquals(['galaxy'], $categories);
 
-        $categories = all(static::getModelClass()::whereHas('ancestors', function ($query) {
+        $categories = static::getModelClass()::whereHas('ancestors', function ($query) {
             $query->where('id', $this->ids[5]);
-        })->pluck('name'));
+        })->pluck('name')->all();
 
         $this->assertEquals(['nokia', 'samsung', 'galaxy', 'sony', 'lenovo'], $categories);
     }
@@ -1071,9 +1071,4 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
         $this->assertEquals($this->ids[1], $category->getParentId());
     }
-}
-
-function all($items)
-{
-    return is_array($items) ? $items : $items->all();
 }
