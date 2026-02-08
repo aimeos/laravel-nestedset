@@ -315,7 +315,7 @@ trait NodeTrait
      *
      * @return Collection
      */
-    public function getAncestors(array $columns = [ '*' ]): Collection
+    public function getAncestors(array $columns = ['*']): Collection
     {
         return $this->ancestors()->get($columns);
     }
@@ -357,7 +357,7 @@ trait NodeTrait
      *
      * @return Collection
      */
-    public function getDescendants(array $columns = [ '*' ]): Collection
+    public function getDescendants(array $columns = ['*']): Collection
     {
         return $this->descendants()->get($columns);
     }
@@ -405,7 +405,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getNextNode(array $columns = [ '*' ]): self
+    public function getNextNode(array $columns = ['*']): self
     {
         return $this->nextNodes()->defaultOrder()->first($columns);
     }
@@ -416,7 +416,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getNextSibling(array $columns = [ '*' ]): self
+    public function getNextSibling(array $columns = ['*']): self
     {
         return $this->nextSiblings()->defaultOrder()->first($columns);
     }
@@ -427,7 +427,7 @@ trait NodeTrait
      *
      * @return Collection
      */
-    public function getNextSiblings(array $columns = [ '*' ]): Collection
+    public function getNextSiblings(array $columns = ['*']): Collection
     {
         return $this->nextSiblings()->get($columns);
     }
@@ -477,7 +477,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getPrevNode(array $columns = [ '*' ]): self
+    public function getPrevNode(array $columns = ['*']): self
     {
         return $this->prevNodes()->defaultOrder('desc')->first($columns);
     }
@@ -488,7 +488,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getPrevSibling(array $columns = [ '*' ]): self
+    public function getPrevSibling(array $columns = ['*']): self
     {
         return $this->prevSiblings()->defaultOrder('desc')->first($columns);
     }
@@ -499,7 +499,7 @@ trait NodeTrait
      *
      * @return Collection
      */
-    public function getPrevSiblings(array $columns = [ '*' ]): Collection
+    public function getPrevSiblings(array $columns = ['*']): Collection
     {
         return $this->prevSiblings()->get($columns);
     }
@@ -532,7 +532,7 @@ trait NodeTrait
      *
      * @return Collection
      */
-    public function getSiblings(array $columns = [ '*' ]): Collection
+    public function getSiblings(array $columns = ['*']): Collection
     {
         return $this->siblings()->get($columns);
     }
@@ -545,7 +545,7 @@ trait NodeTrait
      *
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getSiblingsAndSelf(array $columns = [ '*' ]): Collection
+    public function getSiblingsAndSelf(array $columns = ['*']): Collection
     {
         return $this->siblingsAndSelf()->get($columns);
     }

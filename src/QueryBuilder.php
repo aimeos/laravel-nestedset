@@ -32,7 +32,7 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsAndSelf(int|string $id, array $columns = [ '*' ]): Collection
+    public function ancestorsAndSelf(int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id, true)->get($columns);
     }
@@ -48,7 +48,7 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsOf(int|string $id, array $columns = array( '*' )): Collection
+    public function ancestorsOf(int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id)->get($columns);
     }
@@ -122,7 +122,7 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return Collection
      */
-    public function descendantsAndSelf(int|string $id, array $columns = [ '*' ]): Collection
+    public function descendantsAndSelf(int|string $id, array $columns = ['*']): Collection
     {
         return $this->descendantsOf($id, $columns, true);
     }
@@ -139,7 +139,7 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return Collection
      */
-    public function descendantsOf(int|string $id, array $columns = [ '*' ], bool $andSelf = false): Collection
+    public function descendantsOf(int|string $id, array $columns = ['*'], bool $andSelf = false): Collection
     {
         try {
             return $this->whereDescendantOf($id, 'and', false, $andSelf)->get($columns);
@@ -758,7 +758,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function withDepth(string $as = 'depth'): self
     {
-        if ($this->query->columns === null) $this->query->columns = [ '*' ];
+        if ($this->query->columns === null) $this->query->columns = ['*'];
 
         $table = $this->wrappedTable();
 
