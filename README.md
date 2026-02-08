@@ -4,11 +4,16 @@
 # Laravel tree structure using nested sets
 
 A Laravel package for working with trees in relational databases.
+This package is the successor of the abandoned
+[kalnoy/laravel-nestedset](https://github.com/lazychaser/laravel-nestedset)
+package.
 
 * [Theory](#what-are-nested-sets)
 * [Requirements](#requirements)
 * [Installation](#installation)
 * [Setup](#setup)
+* [Changelog](#changelog)
+* [Deprecations](#deprections)
 * [Migration](#migration)
 * [Usage](#usage)
   * [Tree safety](#tree-safety)
@@ -20,7 +25,6 @@ A Laravel package for working with trees in relational databases.
   * [Helper methods](#helper-methods)
   * [Consistency checking & fixing](#checking-consistency)
   * [Scoping](#scoping)
-  * [Deprecations](#deprections)
 * [License](#license)
 
 ## What are nested sets?
@@ -99,6 +103,28 @@ class MyModel extends Model {
     use NodeTrait;
 }
 ```
+
+## Changes
+
+### 7.x
+
+* Changed namespace from Kalnoy to Aimeos
+* UUID and configurable ID type support
+* New depth column to improve performance
+* Full SQL Server support
+* Strict parameter and return types
+* PHPUnit 11/12 support
+* Several bugfixes
+
+### 6.x
+
+* Original code base of [kalnoy/laravel-nestedset](https://github.com/lazychaser/laravel-nestedset)
+
+## Deprecations
+
+The following methods are deprecated and will be removed in future versions:
+
+* withDepth(): See using [depth attribute](#using-node-depth) instead
 
 ## Migration
 
@@ -736,15 +762,9 @@ MenuItem::scoped([ 'menu_id' => 5])->with('descendants')->findOrFail($id); // OK
 MenuItem::with('descendants')->findOrFail($id); // WRONG
 ```
 
-## Deprecations
-
-The following methods are deprecated and will be removed in future versions:
-
-* withDepth(): See using [depth attribute](#using-node-depth) instead
-
 ## License
 
-Copyright (c) 2017-2026 Alexander Kalnoy, Aimeos
+Copyright (c) 2017-2026 Alexander Kalnoy, Aimeos, and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
