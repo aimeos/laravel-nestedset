@@ -128,15 +128,7 @@ trait NodeTrait
      */
     public static function usesSoftDelete(): bool
     {
-        static $softDelete;
-
-        if (is_null($softDelete)) {
-            $instance = new static;
-
-            return $softDelete = method_exists($instance, 'bootSoftDeletes');
-        }
-
-        return $softDelete;
+        return method_exists(static::class, 'bootSoftDeletes');
     }
 
 
@@ -736,7 +728,7 @@ trait NodeTrait
      */
     public function newNestedSetQuery(?string $table = null): QueryBuilder
     {
-        $builder = $this->usesSoftDelete()
+        $builder = static::usesSoftDelete()
             ? $this->withTrashed()
             : $this->newQuery();
 
@@ -1165,14 +1157,14 @@ trait NodeTrait
         $lft = $this->getLft();
         $rgt = $this->getRgt();
 
-        $method = $this->usesSoftDelete() && $this->forceDeleting
+        $method = static::usesSoftDelete() && $this->forceDeleting
             ? 'forceDelete'
             : 'delete';
 
         // Order by lft desc to delete children before parents when hard deleting (required by MySQL)
         $this->descendants()->orderByDesc($this->getLftName())->{$method}();
 
-        if ($this->hardDeleting()) {
+        if (! static::usesSoftDelete() || $this->forceDeleting) {
             $height = $rgt - $lft + 1;
 
             $this->newNestedSetQuery()->makeGap($rgt + 1, -$height);
@@ -1238,7 +1230,7 @@ trait NodeTrait
      */
     protected function hardDeleting(): bool
     {
-        return ! $this->usesSoftDelete() || $this->forceDeleting;
+        return ! static::usesSoftDelete() || $this->forceDeleting;
     }
 
 
