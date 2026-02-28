@@ -1111,6 +1111,8 @@ class QueryBuilder extends EloquentBuilder
         foreach ($dictionary[$parentId] as $model) {
             $lft = $cut;
             $depth = $parent ? $parent->getDepth() + 1 : 0;
+
+            $model->setDepth($depth);
             $cut = self::reorderNodes($dictionary, $updated, $model, $cut + 1);
 
             if ($model->rawNode($lft, $cut, $parentId, $depth)->isDirty()) {
