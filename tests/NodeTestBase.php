@@ -49,7 +49,8 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         date_default_timezone_set('Europe/Berlin');
 
         $this->ids = $this->categoryData->getIds();
-        DB::table(static::getTableName())->insert($this->categoryData->getData());
+        $this->seedTable(static::getTableName(), $this->categoryData->getData());
+        $this->ids = $this->refreshIds(static::getTableName(), $this->ids);
 
         DB::flushQueryLog();
 
@@ -62,6 +63,41 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         DB::table(static::getTableName())->delete();
 
         parent::tearDown();
+    }
+
+    protected function seedTable(string $table, array $data): void
+    {
+        $driver = DB::connection()->getDriverName();
+        $prefixedTable = DB::connection()->getTablePrefix() . $table;
+
+        if ($driver === 'sqlsrv') {
+            DB::statement("SET IDENTITY_INSERT [$prefixedTable] ON");
+        }
+
+        DB::table($table)->insert($data);
+
+        if ($driver === 'sqlsrv') {
+            DB::statement("SET IDENTITY_INSERT [$prefixedTable] OFF");
+        } elseif ($driver === 'pgsql') {
+            DB::statement("SELECT setval(pg_get_serial_sequence('$prefixedTable', 'id'), coalesce(max(id), 0) + 1, false) FROM \"$prefixedTable\"");
+        }
+    }
+
+    protected function refreshIds(string $table, array $ids): array
+    {
+        $dbIds = DB::table($table)->pluck('id')->all();
+        $map = [];
+
+        foreach ($dbIds as $dbId) {
+            foreach ($ids as $key => $id) {
+                if (strcasecmp((string) $id, (string) $dbId) === 0) {
+                    $map[$key] = (string) $dbId;
+                    break;
+                }
+            }
+        }
+
+        return $map + $ids;
     }
 
     protected function assertNodeReceivesValidValues($node)
