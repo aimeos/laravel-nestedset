@@ -567,7 +567,7 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
     public function testToTreeBuildsWithCustomOrder()
     {
         $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))
-            ->orderBy('title')
+            ->orderBy('name')
             ->get()
             ->toTree();
 
