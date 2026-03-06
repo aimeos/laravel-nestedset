@@ -5,63 +5,144 @@
 version: 2
 
 jobs:
-  "php-8.1":
+  "php81-sqlite":
     docker:
       - image: aimeos/ci-php:8.1
+    environment:
+      DB_DRIVER: sqlite
+      DB_DATABASE: ":memory:"
     steps:
       - checkout
       - restore_cache:
           keys:
-            - php81-{{ checksum "composer.json" }}
+            - php81-sqlite-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^10.0" "illuminate/database:^10.0" "illuminate/events:^10.0" "orchestra/testbench:^8.0"
       - run: composer update -n --prefer-dist
       - save_cache:
-          key: php81-{{ checksum "composer.json" }}
+          key: php81-sqlite-{{ checksum "composer.json" }}
           paths: [./vendor]
       - run: ./vendor/bin/phpunit
 
-  "php-8.2":
+  "php82-mssql":
     docker:
       - image: aimeos/ci-php:8.2
+      - image: mcr.microsoft.com/mssql/server:2017-latest
+        environment:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Passw0rd!"
+    environment:
+      DB_DRIVER: sqlsrv
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "1433"
+      DB_DATABASE: nestedset
+      DB_USERNAME: sa
+      DB_PASSWORD: "Passw0rd!"
     steps:
       - checkout
       - restore_cache:
           keys:
             - php82-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^11.0" "illuminate/database:^11.0" "illuminate/events:^11.0" "orchestra/testbench:^9.0"
       - run: composer update -n --prefer-dist
       - save_cache:
           key: php82-{{ checksum "composer.json" }}
           paths: [./vendor]
+      - run:
+          name: Wait for SQL Server and create database
+          command: |
+            dockerize -wait tcp://127.0.0.1:1433 -timeout 60s
+            php -r "\$pdo = new PDO('sqlsrv:Server=127.0.0.1,1433', 'sa', 'Passw0rd!'); \$pdo->exec('CREATE DATABASE nestedset');"
       - run: ./vendor/bin/phpunit
 
-  "php-8.3":
+  "php83-pgsql":
     docker:
       - image: aimeos/ci-php:8.3
+      - image: postgres:16
+        environment:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: nestedset
+    environment:
+      DB_DRIVER: pgsql
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "5432"
+      DB_DATABASE: nestedset
+      DB_USERNAME: root
+      DB_PASSWORD: root
     steps:
       - checkout
       - restore_cache:
           keys:
             - php83-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^12.0" "illuminate/database:^12.0" "illuminate/events:^12.0" "orchestra/testbench:^10.0"
       - run: composer update -n --prefer-dist
       - save_cache:
           key: php83-{{ checksum "composer.json" }}
           paths: [./vendor]
+      - run:
+          name: Wait for PostgreSQL
+          command: dockerize -wait tcp://127.0.0.1:5432 -timeout 60s
       - run: ./vendor/bin/phpunit
 
-  "php-8.4":
+  "php84-mariadb":
     docker:
       - image: aimeos/ci-php:8.4
+      - image: mariadb:11
+        environment:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: nestedset
+    environment:
+      DB_DRIVER: mysql
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "3306"
+      DB_DATABASE: nestedset
+      DB_USERNAME: root
+      DB_PASSWORD: root
     steps:
       - checkout
       - restore_cache:
           keys:
             - php84-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^12.0" "illuminate/database:^12.0" "illuminate/events:^12.0" "orchestra/testbench:^10.0"
       - run: composer update -n --prefer-dist
       - save_cache:
           key: php84-{{ checksum "composer.json" }}
           paths: [./vendor]
+      - run:
+          name: Wait for MariaDB
+          command: dockerize -wait tcp://127.0.0.1:3306 -timeout 60s
       - run: ./vendor/bin/phpunit
 
-  "php-8.5":
+  "php85-mysql":
+    docker:
+      - image: aimeos/ci-php:8.5
+      - image: mysql:9.0
+        environment:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: nestedset
+    environment:
+      DB_DRIVER: mysql
+      DB_HOST: "127.0.0.1"
+      DB_PORT: "3306"
+      DB_DATABASE: nestedset
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - php85-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^13.0" "illuminate/database:^13.0" "illuminate/events:^13.0" "orchestra/testbench:^11.0"
+      - run: composer update -n --prefer-dist
+      - save_cache:
+          key: php85-{{ checksum "composer.json" }}
+          paths: [./vendor]
+      - run:
+          name: Wait for MySQL
+          command: dockerize -wait tcp://127.0.0.1:3306 -timeout 60s
+      - run: ./vendor/bin/phpunit
+
+  "phpstan":
     docker:
       - image: aimeos/ci-php:8.5
     steps:
@@ -69,19 +150,20 @@ jobs:
       - restore_cache:
           keys:
             - php85-{{ checksum "composer.json" }}
+      - run: composer require --no-update "illuminate/support:^13.0" "illuminate/database:^13.0" "illuminate/events:^13.0" "orchestra/testbench:^11.0"
       - run: composer update -n --prefer-dist
       - save_cache:
           key: php85-{{ checksum "composer.json" }}
           paths: [./vendor]
-      - run: ./vendor/bin/phpunit
       - run: ./vendor/bin/phpstan analyze -l 1 ./src/
 
 workflows:
   version: 2
   unittest:
     jobs:
-      - "php-8.1"
-      - "php-8.2"
-      - "php-8.3"
-      - "php-8.4"
-      - "php-8.5"
+      - "php81-sqlite"
+      - "php82-mssql"
+      - "php83-pgsql"
+      - "php84-mariadb"
+      - "php85-mysql"
+      - "phpstan"
