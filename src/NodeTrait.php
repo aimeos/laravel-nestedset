@@ -1323,7 +1323,7 @@ trait NodeTrait
     protected function restoreDescendants(Carbon $deletedAt): void
     {
         $this->descendants()
-            ->where($this->getDeletedAtColumn(), '>=', $deletedAt)
+            ->where($this->getDeletedAtColumn(), '>=', $deletedAt->copy()->startOfSecond())
             ->restore();
     }
 

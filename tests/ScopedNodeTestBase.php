@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-abstract class ScopedNodeTestBase extends \PHPUnit\Framework\TestCase
+abstract class ScopedNodeTestBase extends \Orchestra\Testbench\TestCase
 {
     abstract protected static function getTableName(): string;
 
@@ -13,36 +14,72 @@ abstract class ScopedNodeTestBase extends \PHPUnit\Framework\TestCase
     protected array $ids = [];
     protected MenuItemData $menuItemData;
 
-    public static function setUpBeforeClass(): void
+    protected function getPackageProviders($app)
     {
-        $schema = Capsule::schema();
-        $table = static::getTableName();
+        return [\Aimeos\Nestedset\NestedSetServiceProvider::class];
+    }
 
-        $schema->dropIfExists($table);
-
-        $schema->create($table, function (\Illuminate\Database\Schema\Blueprint $table) {
-            static::createTable($table);
-        });
-
-        Capsule::enableQueryLog();
+    protected function defineEnvironment($app)
+    {
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver'   => env('DB_DRIVER', 'sqlite'),
+            'host'     => env('DB_HOST', ''),
+            'port'     => env('DB_PORT', ''),
+            'database' => env('DB_DATABASE', ':memory:'),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
+            'prefix'   => 'prfx_',
+        ]);
     }
 
     public function setUp(): void
     {
-        $this->ids = $this->menuItemData->getIds();
-        Capsule::table(static::getTableName())->insert($this->menuItemData->getData());
+        parent::setUp();
 
-        Capsule::flushQueryLog();
+        $table = static::getTableName();
+
+        Schema::dropIfExists($table);
+        Schema::create($table, function (\Illuminate\Database\Schema\Blueprint $table) {
+            static::createTable($table);
+        });
+
+        DB::enableQueryLog();
+
+        date_default_timezone_set('America/Denver');
+
+        $this->ids = $this->menuItemData->getIds();
+        $this->seedTable(static::getTableName(), $this->menuItemData->getData());
+        $this->ids = $this->refreshIds(static::getTableName(), $this->ids);
+
+        DB::flushQueryLog();
 
         $modelClass = static::getModelClass();
         $modelClass::resetActionsPerformed();
-
-        date_default_timezone_set('America/Denver');
     }
 
     public function tearDown(): void
     {
-        Capsule::table(static::getTableName())->delete();
+        DB::table(static::getTableName())->delete();
+
+        parent::tearDown();
+    }
+
+    protected function refreshIds(string $table, array $ids): array
+    {
+        $dbIds = DB::table($table)->pluck('id')->all();
+        $map = [];
+
+        foreach ($dbIds as $dbId) {
+            foreach ($ids as $key => $id) {
+                if (strcasecmp((string) $id, (string) $dbId) === 0) {
+                    $map[$key] = (string) $dbId;
+                    break;
+                }
+            }
+        }
+
+        return $map + $ids;
     }
 
     protected function assertOtherScopeNotAffected()

@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
+abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
 {
     abstract protected static function getTableName(): string;
 
@@ -13,28 +14,45 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     protected array $ids = [];
     protected CategoryData $categoryData;
 
-    public static function setUpBeforeClass(): void
+    protected function getPackageProviders($app)
     {
-        $schema = Capsule::schema();
-        $table = static::getTableName();
+        return [\Aimeos\Nestedset\NestedSetServiceProvider::class];
+    }
 
-        $schema->dropIfExists($table);
-
-        $schema->create($table, function (\Illuminate\Database\Schema\Blueprint $table) {
-            static::createTable($table);
-        });
-
-        Capsule::enableQueryLog();
-
-        date_default_timezone_set('Europe/Berlin');
+    protected function defineEnvironment($app)
+    {
+        $app['config']->set('database.default', 'testing');
+        $app['config']->set('database.connections.testing', [
+            'driver'   => env('DB_DRIVER', 'sqlite'),
+            'host'     => env('DB_HOST', ''),
+            'port'     => env('DB_PORT', ''),
+            'database' => env('DB_DATABASE', ':memory:'),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
+            'prefix'   => 'prfx_',
+        ]);
     }
 
     public function setUp(): void
     {
-        $this->ids = $this->categoryData->getIds();
-        Capsule::table(static::getTableName())->insert($this->categoryData->getData());
+        parent::setUp();
 
-        Capsule::flushQueryLog();
+        $table = static::getTableName();
+
+        Schema::dropIfExists($table);
+        Schema::create($table, function (\Illuminate\Database\Schema\Blueprint $table) {
+            static::createTable($table);
+        });
+
+        DB::enableQueryLog();
+
+        date_default_timezone_set('Europe/Berlin');
+
+        $this->ids = $this->categoryData->getIds();
+        $this->seedTable(static::getTableName(), $this->categoryData->getData());
+        $this->ids = $this->refreshIds(static::getTableName(), $this->ids);
+
+        DB::flushQueryLog();
 
         $modelClass = static::getModelClass();
         $modelClass::resetActionsPerformed();
@@ -42,7 +60,26 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
     public function tearDown(): void
     {
-        Capsule::table(static::getTableName())->delete();
+        DB::table(static::getTableName())->delete();
+
+        parent::tearDown();
+    }
+
+    protected function refreshIds(string $table, array $ids): array
+    {
+        $dbIds = DB::table($table)->pluck('id')->all();
+        $map = [];
+
+        foreach ($dbIds as $dbId) {
+            foreach ($ids as $key => $id) {
+                if (strcasecmp((string) $id, (string) $dbId) === 0) {
+                    $map[$key] = (string) $dbId;
+                    break;
+                }
+            }
+        }
+
+        return $map + $ids;
     }
 
     protected function assertNodeReceivesValidValues($node)
@@ -63,7 +100,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
         $table = $table ?? static::getTableName();
         $checks = array();
 
-        $connection = Capsule::connection();
+        $connection = DB::connection();
 
         $table = $connection->getQueryGrammar()->wrapTable($table);
 
@@ -87,7 +124,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
         $actual = $connection->selectOne($sql);
 
         $this->assertEquals(null, $actual->errors, "The tree structure of $table is broken!");
-        $actual = (array)Capsule::connection()->selectOne($sql);
+        $actual = (array)DB::connection()->selectOne($sql);
 
         $this->assertEquals(array('errors' => null), $actual, "The tree structure of $table is broken!");
     }
@@ -548,7 +585,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
     public function testToTreeBuildsWithCustomOrder()
     {
         $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))
-            ->orderBy('title')
+            ->orderBy('name')
             ->get()
             ->toTree();
 
@@ -970,10 +1007,10 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
     public function testEagerLoadAncestors()
     {
-        $queryLogCount = count(Capsule::connection()->getQueryLog());
+        $queryLogCount = count(DB::connection()->getQueryLog());
         $categories = static::getModelClass()::with('ancestors')->orderBy('name')->get();
 
-        $this->assertEquals($queryLogCount + 2, count(Capsule::connection()->getQueryLog()));
+        $this->assertEquals($queryLogCount + 2, count(DB::connection()->getQueryLog()));
 
 
         $expectedShape = [
@@ -1005,10 +1042,10 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
 
     public function testLazyLoadAncestors()
     {
-        $queryLogCount = count(Capsule::connection()->getQueryLog());
+        $queryLogCount = count(DB::connection()->getQueryLog());
         $categories = static::getModelClass()::orderBy('name')->get();
 
-        $this->assertEquals($queryLogCount + 1, count(Capsule::connection()->getQueryLog()));
+        $this->assertEquals($queryLogCount + 1, count(DB::connection()->getQueryLog()));
 
         $expectedShape = [
             'apple (' . $this->ids[3] . ')}' => 'store (' . $this->ids[1] . ') > notebooks (' . $this->ids[2] . ')',
@@ -1035,7 +1072,7 @@ abstract class NodeTestBase extends \PHPUnit\Framework\TestCase
         }
 
         // assert that there is number of original query + 1 + number of rows to fulfill the relation
-        $this->assertEquals($queryLogCount + 12, count(Capsule::connection()->getQueryLog()));
+        $this->assertEquals($queryLogCount + 12, count(DB::connection()->getQueryLog()));
 
         $this->assertEquals($expectedShape, $output);
     }

@@ -29,4 +29,9 @@ class ScopedNodeUuidTest extends ScopedNodeTestBase
         NestedSet::columns($table, 'id', 'uuid');
         NestedSet::columnsDepth($table);
     }
+
+    protected function seedTable(string $table, array $data): void
+    {
+        DB::table($table)->insert($data);
+    }
 }
