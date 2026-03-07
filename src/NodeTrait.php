@@ -974,25 +974,22 @@ trait NodeTrait
     /**
      * Get query for siblings of the node.
      *
-     * @return QueryBuilder
+     * @return SiblingsRelation
      */
-    public function siblings(): QueryBuilder
+    public function siblings(): SiblingsRelation
     {
-        return $this->newScopedQuery()
-            ->where($this->getKeyName(), '<>', $this->getKey())
-            ->where($this->getParentIdName(), '=', $this->getParentId());
+        return new SiblingsRelation($this->newQuery(), $this);
     }
 
 
     /**
      * Get the node siblings and the node itself.
      *
-     * @return QueryBuilder
+     * @return SiblingsRelation
      */
-    public function siblingsAndSelf(): QueryBuilder
+    public function siblingsAndSelf(): SiblingsRelation
     {
-        return $this->newScopedQuery()
-            ->where($this->getParentIdName(), '=', $this->getParentId());
+        return new SiblingsRelation($this->newQuery(), $this, true);
     }
 
 
