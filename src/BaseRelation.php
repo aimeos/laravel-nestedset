@@ -144,9 +144,9 @@ abstract class BaseRelation extends Relation
         $query = $this->getParent()->replicate()->newScopedQuery()->select($columns);
 
         $table = $query->getModel()->getTable();
+        $hash = $this->getRelationCountHash();
 
-        $query->from($table.' as '.$hash = $this->getRelationCountHash());
-
+        $query->from($table.' as '.$hash);
         $query->getModel()->setTable($hash);
 
         $grammar = $query->getQuery()->getGrammar();
