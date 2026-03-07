@@ -1151,9 +1151,6 @@ trait NodeTrait
      */
     protected function deleteDescendants(): void
     {
-        $lft = $this->getLft();
-        $rgt = $this->getRgt();
-
         $method = static::usesSoftDelete() && $this->forceDeleting
             ? 'forceDelete'
             : 'delete';
@@ -1162,6 +1159,11 @@ trait NodeTrait
         $this->descendants()->orderByDesc($this->getLftName())->{$method}();
 
         if (! static::usesSoftDelete() || $this->forceDeleting) {
+            // Re-read bounds from DB since descendants deletion may have modified the tree
+            $this->refreshNode();
+
+            $lft = $this->getLft();
+            $rgt = $this->getRgt();
             $height = $rgt - $lft + 1;
 
             $this->newNestedSetQuery()->makeGap($rgt + 1, -$height);
