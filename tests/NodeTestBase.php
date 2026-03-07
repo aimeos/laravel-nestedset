@@ -914,6 +914,73 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals($this->ids[2], $nodes->first()->getKey());
     }
 
+    public function testSiblingsRelation()
+    {
+        $node = $this->findCategory('samsung');
+        $result = $node->siblings;
+
+        $this->assertEquals(3, $result->count());
+        $this->assertEquals([$this->ids[6], $this->ids[9], $this->ids[10]], $result->pluck('id')->all());
+    }
+
+    public function testSiblingsAndSelfRelation()
+    {
+        $node = $this->findCategory('samsung');
+        $result = $node->siblingsAndSelf;
+
+        $this->assertEquals(4, $result->count());
+        $this->assertEquals(
+            [$this->ids[6], $this->ids[7], $this->ids[9], $this->ids[10]],
+            $result->pluck('id')->all()
+        );
+    }
+
+    public function testSiblingsEagerlyLoaded()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[2], $this->ids[5]])->get();
+
+        $nodes->load('siblings');
+
+        $this->assertEquals(2, $nodes->count());
+        $this->assertTrue($nodes->first()->relationLoaded('siblings'));
+    }
+
+    public function testSiblingsAndSelfEagerlyLoaded()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[3], $this->ids[7]])->get();
+
+        $nodes->load('siblingsAndSelf');
+
+        $this->assertEquals(2, $nodes->count());
+        $this->assertTrue($nodes->first()->relationLoaded('siblingsAndSelf'));
+
+        // apple (id=3, parent=2) has sibling lenovo (id=4), plus itself = 2
+        $this->assertEquals(2, $nodes->first()->siblingsAndSelf->count());
+    }
+
+    public function testSiblingsRelationQuery()
+    {
+        // apple (id=3) has 1 sibling, galaxy (id=8) has 0 siblings
+        $nodes = static::getModelClass()::has('siblings')->whereIn('id', [$this->ids[3], $this->ids[8]])->get();
+
+        $this->assertEquals(1, $nodes->count());
+        $this->assertEquals($this->ids[3], $nodes->first()->getKey());
+
+        // nodes with more than 2 siblings: nokia(6), samsung(7), sony(9), lenovo(10) each have 3 siblings
+        $nodes = static::getModelClass()::has('siblings', '>', 2)->get();
+
+        $this->assertEquals(4, $nodes->count());
+    }
+
+    public function testSiblingsOfRootNode()
+    {
+        $node = $this->findCategory('store');
+        $result = $node->siblings;
+
+        $this->assertEquals(1, $result->count());
+        $this->assertEquals($this->ids[11], $result->first()->getKey());
+    }
+
     public function testRebuildTree()
     {
         $fixed = static::getModelClass()::rebuildTree([
