@@ -1187,20 +1187,6 @@ trait NodeTrait
 
 
     /**
-     * @return array
-     */
-    protected function getArrayableRelations(): array
-    {
-        $result = parent::getArrayableRelations();
-
-        // To fix #17 when converting tree to json falling to infinite recursion.
-        unset($result['parent']);
-
-        return $result;
-    }
-
-
-    /**
      * Get the lower bound.
      *
      * @return int

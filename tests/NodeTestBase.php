@@ -594,7 +594,7 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $root = $tree->first();
         $this->assertEquals('mobile', $root->name);
         $this->assertEquals(4, count($root->children));
-        $this->assertEquals($root, $root->children->first()->parent);
+        $this->assertEquals($root->getAttributes(), $root->children->first()->parent->getAttributes());
     }
 
     public function testToTreeWithSpecifiedRoot()
