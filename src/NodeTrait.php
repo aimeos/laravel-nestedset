@@ -24,9 +24,9 @@ trait NodeTrait
     public static int $actionsPerformed = 0;
 
     /**
-     * @var \Carbon\Carbon
+     * @var \Carbon\Carbon|null
      */
-    public static $deletedAt;
+    public static ?Carbon $deletedAt = null;
 
     /**
      * Whether the node has moved since last save.
@@ -362,7 +362,7 @@ trait NodeTrait
      */
     public function getDescendantCount(): int
     {
-        return ceil($this->getNodeHeight() / 2) - 1;
+        return (int) ceil($this->getNodeHeight() / 2) - 1;
     }
 
 
@@ -397,7 +397,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getNextNode(array $columns = ['*']): self
+    public function getNextNode(array $columns = ['*']): ?self
     {
         return $this->nextNodes()->defaultOrder()->first($columns);
     }
@@ -408,7 +408,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getNextSibling(array $columns = ['*']): self
+    public function getNextSibling(array $columns = ['*']): ?self
     {
         return $this->nextSiblings()->defaultOrder()->first($columns);
     }
@@ -469,7 +469,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getPrevNode(array $columns = ['*']): self
+    public function getPrevNode(array $columns = ['*']): ?self
     {
         return $this->prevNodes()->defaultOrder('desc')->first($columns);
     }
@@ -480,7 +480,7 @@ trait NodeTrait
      *
      * @return self
      */
-    public function getPrevSibling(array $columns = ['*']): self
+    public function getPrevSibling(array $columns = ['*']): ?self
     {
         return $this->prevSiblings()->defaultOrder('desc')->first($columns);
     }
@@ -596,7 +596,7 @@ trait NodeTrait
      */
     public function isChildOf(self $other): bool
     {
-        return $this->getParentId() == $other->getKey();
+        return $this->getParentId() && $this->getParentId() === $other->getKey();
     }
 
 
@@ -658,7 +658,8 @@ trait NodeTrait
     public function isSelfOrDescendantOf(self $other): bool
     {
         return $this->getLft() >= $other->getLft() &&
-            $this->getLft() < $other->getRgt();
+            $this->getLft() < $other->getRgt() &&
+            $this->isSameScope($other);
     }
 
 
@@ -671,7 +672,7 @@ trait NodeTrait
      */
     public function isSiblingOf(self $other): bool
     {
-        return $this->getParentId() == $other->getParentId();
+        return $this->getParentId() && $this->getParentId() == $other->getParentId();
     }
 
 
@@ -903,7 +904,7 @@ trait NodeTrait
      */
     public function setDepth(int|null $value): self
     {
-        $this->attributes[$this->getDepthName()] = (int) $value;
+        $this->attributes[$this->getDepthName()] = $value ?? 0;
 
         return $this;
     }
@@ -946,7 +947,7 @@ trait NodeTrait
      */
     public function setParentIdAttribute(int|string|null $value): self
     {
-        if ($this->getParentId() == $value) return $this;
+        if ($this->getParentId() && $this->getParentId() === $value) return $this;
 
         if ($value) {
             $this->appendToNode($this->newScopedQuery()->findOrFail($value));

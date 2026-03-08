@@ -251,7 +251,8 @@ class QueryBuilder extends EloquentBuilder
     public function getPlainNodeData(int|string $id, bool $required = false): array
     {
         $data = $this->getNodeData($id, $required);
-        return [ $data[$this->model->getLftName()], $data[$this->model->getRgtName()] ];
+
+        return [ $data[$this->model->getLftName()] ?? 0, $data[$this->model->getRgtName()] ?? 0 ];
     }
 
 
@@ -846,20 +847,20 @@ class QueryBuilder extends EloquentBuilder
      */
     protected function columnPatch(string $col, array $params): Expression
     {
-        extract($params);
-
-        /** @var int $height */
+        $height = $params['height'];
         if ($height >= 0) $height = '+'.$height;
 
-        if (isset($cut)) {
+        if (isset($params['cut'])) {
+            $cut = $params['cut'];
             return new Expression("case when {$col} >= {$cut} then {$col}{$height} else {$col} end");
         }
 
-        /** @var int $distance */
-        /** @var int $lft */
-        /** @var int $rgt */
-        /** @var int $from */
-        /** @var int $to */
+        $distance = $params['distance'];
+        $lft = $params['lft'];
+        $rgt = $params['rgt'];
+        $from = $params['from'];
+        $to = $params['to'];
+
         if ($distance >= 0) $distance = '+'.$distance;
 
         return new Expression( // first "when" moves the node, second "when" move other nodes
@@ -881,11 +882,10 @@ class QueryBuilder extends EloquentBuilder
      */
     protected function depthPatch(string $col, array $params): Expression
     {
-        extract($params);
+        $lft = $params['lft'];
+        $rgt = $params['rgt'];
+        $depth = $params['depth'];
 
-        /** @var int $lft */
-        /** @var int $rgt */
-        /** @var int $depth */
         if ($depth >= 0) {
             $depth = '+' . $depth;
         }

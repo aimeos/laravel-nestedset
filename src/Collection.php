@@ -87,12 +87,12 @@ class Collection extends BaseCollection
 
         /** @var Model|NodeTrait $node */
         foreach ($this->items as $node) {
-            if ($node->getParentId() == $root) {
+            if ($node->getParentId() && $node->getParentId() == $root) {
                 $items[] = $node;
             }
 
             if($node->isLeaf()){
-                unset($node->children);
+                $node->setRelation('children', new BaseCollection);
             }
         }
 
