@@ -716,6 +716,14 @@ trait NodeTrait
      */
     public function newEloquentBuilder($query): QueryBuilder
     {
+        if (method_exists($this, 'resolveCustomBuilderClass')
+            && ($class = $this->resolveCustomBuilderClass())) {
+            if (!is_subclass_of($class, QueryBuilder::class)) {
+                throw new LogicException("Custom builder [{$class}] must extend " . QueryBuilder::class);
+            }
+            return new $class($query);
+        }
+
         return new QueryBuilder($query);
     }
 
