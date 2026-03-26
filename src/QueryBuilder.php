@@ -503,7 +503,7 @@ class QueryBuilder extends EloquentBuilder
                     ->delete();
             } else {
                 foreach ($existing as $model) {
-                    $dictionary[$model->getParentId()][] = $model;
+                    $dictionary[$model->getParentId() ?? ''][] = $model;
 
                     if ($delete && $this->model->usesSoftDelete() &&
                         ! $model->{$model->getDeletedAtColumn()}
@@ -826,7 +826,7 @@ class QueryBuilder extends EloquentBuilder
 
             $model->fill(Arr::except($itemData, 'children'))->save();
 
-            $dictionary[$parentId][] = $model;
+            $dictionary[$parentId ?? ''][] = $model;
 
             if ( ! isset($itemData['children'])) continue;
 
@@ -917,7 +917,7 @@ class QueryBuilder extends EloquentBuilder
 
         // Save nodes that have invalid parent as roots
         while ( ! empty($dictionary)) {
-            $dictionary[null] = reset($dictionary);
+            $dictionary[''] = reset($dictionary);
 
             unset($dictionary[key($dictionary)]);
 
@@ -1102,13 +1102,14 @@ class QueryBuilder extends EloquentBuilder
     protected static function reorderNodes( array &$dictionary, array &$updated, Model|null $parent = null, int $cut = 1): int
     {
         $parentId = $parent?->getKey();
+        $key = $parentId ?? '';
 
-        if ( ! isset($dictionary[$parentId])) {
+        if ( ! isset($dictionary[$key])) {
             return $cut;
         }
 
         /** @var Model|NodeTrait $model */
-        foreach ($dictionary[$parentId] as $model) {
+        foreach ($dictionary[$key] as $model) {
             $lft = $cut;
             $depth = $parent ? $parent->getDepth() + 1 : 0;
 
@@ -1122,7 +1123,7 @@ class QueryBuilder extends EloquentBuilder
             ++$cut;
         }
 
-        unset($dictionary[$parentId]);
+        unset($dictionary[$key]);
 
         return $cut;
     }
