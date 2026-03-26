@@ -27,12 +27,12 @@ class QueryBuilder extends EloquentBuilder
 
 
     /**
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsAndSelf(int|string $id, array $columns = ['*']): Collection
+    public function ancestorsAndSelf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id, true)->get($columns);
     }
@@ -43,12 +43,12 @@ class QueryBuilder extends EloquentBuilder
      *
      * @since 2.0
      *
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsOf(int|string $id, array $columns = ['*']): Collection
+    public function ancestorsOf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id)->get($columns);
     }
@@ -117,12 +117,12 @@ class QueryBuilder extends EloquentBuilder
 
 
     /**
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return Collection
      */
-    public function descendantsAndSelf(int|string $id, array $columns = ['*']): Collection
+    public function descendantsAndSelf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->descendantsOf($id, $columns, true);
     }
@@ -133,13 +133,13 @@ class QueryBuilder extends EloquentBuilder
      *
      * @since 2.0
      *
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      * @param bool $andSelf
      *
      * @return Collection
      */
-    public function descendantsOf(int|string $id, array $columns = ['*'], bool $andSelf = false): Collection
+    public function descendantsOf(Model|int|string $id, array $columns = ['*'], bool $andSelf = false): Collection
     {
         try {
             return $this->whereDescendantOf($id, 'and', false, $andSelf)->get($columns);
