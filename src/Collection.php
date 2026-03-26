@@ -87,7 +87,7 @@ class Collection extends BaseCollection
 
         /** @var Model|NodeTrait $node */
         foreach ($this->items as $node) {
-            if ($root && $node->getParentId() == $root) {
+            if ($node->getParentId() == $root) { // allow null == null for multiple root nodes
                 $items[] = $node;
             }
 
