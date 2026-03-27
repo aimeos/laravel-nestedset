@@ -1157,6 +1157,74 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(['nokia', 'samsung', 'galaxy', 'sony', 'lenovo'], $categories);
     }
 
+    public function testMultipleRootNodesAreSiblings()
+    {
+        $store = $this->findCategory('store');
+        $store2 = $this->findCategory('store_2');
+
+        $this->assertTrue($store->isSiblingOf($store2));
+        $this->assertTrue($store2->isSiblingOf($store));
+    }
+
+    public function testMultipleRootNodesAreNotChildren()
+    {
+        $store = $this->findCategory('store');
+        $store2 = $this->findCategory('store_2');
+
+        $this->assertFalse($store->isChildOf($store2));
+        $this->assertFalse($store2->isChildOf($store));
+    }
+
+    public function testMultipleRootNodesInToTree()
+    {
+        $tree = static::getModelClass()::defaultOrder()->get()->toTree();
+
+        $this->assertEquals(2, $tree->count());
+        $this->assertEquals('store', $tree->first()->name);
+        $this->assertEquals('store_2', $tree->last()->name);
+    }
+
+    public function testMultipleRootNodesInToFlatTree()
+    {
+        $tree = static::getModelClass()::defaultOrder()->get()->toFlatTree();
+
+        $this->assertEquals(11, $tree->count());
+        $this->assertEquals('store', $tree->first()->name);
+        $this->assertEquals('store_2', $tree->last()->name);
+    }
+
+    public function testNewRootNodeIsSiblingOfExisting()
+    {
+        $model = static::getModelClass();
+        $node = new $model(['name' => 'store_3']);
+        $node->save();
+
+        $this->assertTreeNotBroken();
+        $this->assertTrue($node->isRoot());
+
+        $store = $this->findCategory('store');
+        $this->assertTrue($node->isSiblingOf($store));
+        $this->assertTrue($store->isSiblingOf($node));
+    }
+
+    public function testSetParentIdToNullKeepsRoot()
+    {
+        $store = $this->findCategory('store');
+        $store->parent_id = null;
+
+        $this->assertTrue($store->isRoot());
+        $this->assertTreeNotBroken();
+    }
+
+    public function testChildIsNotSiblingOfRoot()
+    {
+        $store = $this->findCategory('store');
+        $notebooks = $this->findCategory('notebooks');
+
+        $this->assertFalse($store->isSiblingOf($notebooks));
+        $this->assertFalse($notebooks->isSiblingOf($store));
+    }
+
     public function testReplication()
     {
         $category = $this->findCategory('nokia');
