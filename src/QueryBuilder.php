@@ -892,7 +892,7 @@ class QueryBuilder extends EloquentBuilder
 
         return new Expression(
             "case
-                when {$this->model->getLftName()} between {$lft} and {$rgt}
+                when {$this->query->getGrammar()->wrap($this->model->getLftName())} between {$lft} and {$rgt}
                 then {$col}{$depth}
                 else {$col}
             end"
