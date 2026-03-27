@@ -596,7 +596,7 @@ trait NodeTrait
      */
     public function isChildOf(self $other): bool
     {
-        return $this->getParentId() && $this->getParentId() === $other->getKey();
+        return $this->getParentId() === $other->getKey() && $this->getParentId() !== null;
     }
 
 
@@ -672,7 +672,7 @@ trait NodeTrait
      */
     public function isSiblingOf(self $other): bool
     {
-        return $this->getParentId() && $this->getParentId() == $other->getParentId();
+        return $this->getParentId() === $other->getParentId();
     }
 
 
@@ -938,7 +938,7 @@ trait NodeTrait
      */
     public function setParentId(int|string|null $value): self
     {
-        $this->attributes[$this->getParentIdName()] = $value;
+        $this->attributes[$this->getParentIdName()] = $value ?: null;
 
         return $this;
     }
@@ -955,7 +955,7 @@ trait NodeTrait
      */
     public function setParentIdAttribute(int|string|null $value): self
     {
-        if ($this->getParentId() && $this->getParentId() === $value) return $this;
+        if ($this->getParentId() === $value) return $this; // skip redundant makeRoot() when parent_id is already null
 
         if ($value) {
             $this->appendToNode($this->newScopedQuery()->findOrFail($value));

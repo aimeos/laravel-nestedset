@@ -23,7 +23,7 @@ class Collection extends BaseCollection
 
         /** @var NodeTrait|Model $node */
         foreach ($this->items as $node) {
-            if ( ! $node->getParentId()) {
+            if ($node->getParentId() === null) {
                 $node->setRelation('parent', null);
             }
 
@@ -87,7 +87,7 @@ class Collection extends BaseCollection
 
         /** @var Model|NodeTrait $node */
         foreach ($this->items as $node) {
-            if ($node->getParentId() == $root) { // allow null == null for multiple root nodes
+            if ($node->getParentId() === $root) {
                 $items[] = $node;
             }
 
@@ -141,7 +141,7 @@ class Collection extends BaseCollection
      */
     protected function flattenTree(self $groupedNodes, int|string|null $parentId): self
     {
-        foreach ($groupedNodes->get($parentId, []) as $node) {
+        foreach ($groupedNodes->get($parentId ?? '', []) as $node) {
             $this->push($node);
 
             $this->flattenTree($groupedNodes, $node->getKey());
