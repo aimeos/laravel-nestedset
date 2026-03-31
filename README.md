@@ -668,13 +668,12 @@ This will break the tree!
 
 `SoftDeletes` trait is supported, also on model level.
 
-#### Optimizing deletion
-
+**Hint:** Optimizing deletion
 By default, when a node is deleted, each descendant is loaded and deleted individually
 so that Eloquent model events (e.g. `deleting`, `deleted`) are fired for every
 descendant. If you don't rely on these events for descendants and want faster
-deletion via a single query, set the `$fireDescendantEvents` property to `false`
-on your model:
+deletion via a single query, override the `shouldFireDescendantEvents` method
+in your model:
 
 ```php
 use Aimeos\Nestedset\NodeTrait;
@@ -682,7 +681,10 @@ use Aimeos\Nestedset\NodeTrait;
 class MyModel extends Model {
     use NodeTrait;
 
-    protected bool $fireDescendantEvents = false;
+    protected function shouldFireDescendantEvents(): bool
+    {
+        return false;
+    }
 }
 ```
 

@@ -29,13 +29,6 @@ trait NodeTrait
     public static ?Carbon $deletedAt = null;
 
     /**
-     * Whether to fire model events for each descendant when deleting a node.
-     *
-     * @var bool
-     */
-    protected bool $fireDescendantEvents = true;
-
-    /**
      * Whether the node is being deleted as part of a subtree removal.
      *
      * @var bool
@@ -1208,6 +1201,20 @@ trait NodeTrait
 
 
     /**
+     * Whether to fire model events for each descendant when deleting a node.
+     *
+     * Override this method in your model to return false for faster deletion
+     * via a single query instead of loading and deleting each descendant individually.
+     *
+     * @return bool
+     */
+    protected function shouldFireDescendantEvents(): bool
+    {
+        return true;
+    }
+
+
+    /**
      * Update the tree when the node is removed physically.
      */
     protected function deleteDescendants(): void
@@ -1219,7 +1226,7 @@ trait NodeTrait
         // Order by lft desc to delete children before parents when hard deleting (required by MySQL)
         $query = $this->descendants()->orderByDesc($this->getLftName());
 
-        if ($this->fireDescendantEvents) {
+        if ($this->shouldFireDescendantEvents()) {
             if (static::usesSoftDelete() && $this->forceDeleting) {
                 $query->withTrashed();
             }
