@@ -325,7 +325,17 @@ trait NodeTrait
      */
     public function getAncestors(array $columns = ['*']): Collection
     {
-        return $this->ancestors()->get($columns);
+        if ($columns === ['*'] && $this->relationLoaded('ancestors')) {
+            return $this->getRelation('ancestors');
+        }
+
+        $result = $this->ancestors()->get($columns);
+
+        if ($columns === ['*']) {
+            $this->setRelation('ancestors', $result);
+        }
+
+        return $result;
     }
 
 
@@ -367,7 +377,17 @@ trait NodeTrait
      */
     public function getDescendants(array $columns = ['*']): Collection
     {
-        return $this->descendants()->get($columns);
+        if ($columns === ['*'] && $this->relationLoaded('descendants')) {
+            return $this->getRelation('descendants');
+        }
+
+        $result = $this->descendants()->get($columns);
+
+        if ($columns === ['*']) {
+            $this->setRelation('descendants', $result);
+        }
+
+        return $result;
     }
 
 
@@ -542,7 +562,17 @@ trait NodeTrait
      */
     public function getSiblings(array $columns = ['*']): Collection
     {
-        return $this->siblings()->get($columns);
+        if ($columns === ['*'] && $this->relationLoaded('siblings')) {
+            return $this->getRelation('siblings');
+        }
+
+        $result = $this->siblings()->get($columns);
+
+        if ($columns === ['*']) {
+            $this->setRelation('siblings', $result);
+        }
+
+        return $result;
     }
 
 
@@ -883,6 +913,11 @@ trait NodeTrait
         $attributes = $this->newNestedSetQuery()->getNodeData($this->getKey());
 
         $this->attributes = array_merge($this->attributes, $attributes);
+
+        $this->unsetRelation('ancestors');
+        $this->unsetRelation('descendants');
+        $this->unsetRelation('siblings');
+        $this->unsetRelation('children');
     }
 
 
