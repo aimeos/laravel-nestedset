@@ -29,6 +29,20 @@ trait NodeTrait
     public static ?Carbon $deletedAt = null;
 
     /**
+     * Whether to fire model events for each descendant when deleting a node.
+     *
+     * @var bool
+     */
+    protected bool $fireDescendantEvents = true;
+
+    /**
+     * Whether the node is being deleted as part of a subtree removal.
+     *
+     * @var bool
+     */
+    private bool $deletingAsDescendant = false;
+
+    /**
      * Whether the node has moved since last save.
      *
      * @var bool
@@ -53,6 +67,10 @@ trait NodeTrait
         });
 
         static::deleting(function ($model) {
+            if ($model->deletingAsDescendant) {
+                return;
+            }
+
             // We will need fresh data to delete node safely
             $model->refreshNode();
             // delete descendants before the node is being deleted physically
@@ -1164,7 +1182,20 @@ trait NodeTrait
             : 'delete';
 
         // Order by lft desc to delete children before parents when hard deleting (required by MySQL)
-        $this->descendants()->orderByDesc($this->getLftName())->{$method}();
+        $query = $this->descendants()->orderByDesc($this->getLftName());
+
+        if ($this->fireDescendantEvents) {
+            if (static::usesSoftDelete() && $this->forceDeleting) {
+                $query->withTrashed();
+            }
+
+            $query->get()->each(function ($model) use ($method) {
+                $model->deletingAsDescendant = true;
+                $model->{$method}();
+            });
+        } else {
+            $query->{$method}();
+        }
 
         if (! static::usesSoftDelete() || $this->forceDeleting) {
             $lft = $this->getLft();
