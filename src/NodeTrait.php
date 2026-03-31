@@ -102,8 +102,6 @@ trait NodeTrait
             $child->setRelation('parent', $instance);
         }
 
-        $instance->refreshNode();
-
         return $instance->setRelation('children', $relation);
     }
 
@@ -862,7 +860,7 @@ trait NodeTrait
      */
     public function refreshNode(): void
     {
-        if ( ! $this->exists || static::$actionsPerformed === 0) return;
+        if ( ! $this->exists) return;
 
         $attributes = $this->newNestedSetQuery()->getNodeData($this->getKey());
 
@@ -1035,8 +1033,9 @@ trait NodeTrait
         $parent->refreshNode();
 
         $cut = $prepend ? $parent->getLft() + 1 : $parent->getRgt();
+        $targetDepth = $parent->getDepth() + 1;
 
-        if ( ! $this->insertAt($cut)) {
+        if ( ! $this->insertAt($cut, $targetDepth)) {
             return false;
         }
 
@@ -1058,7 +1057,7 @@ trait NodeTrait
     {
         $node->refreshNode();
 
-        return $this->insertAt($after ? $node->getRgt() + 1 : $node->getLft());
+        return $this->insertAt($after ? $node->getRgt() + 1 : $node->getLft(), $node->getDepth());
     }
 
 
@@ -1088,7 +1087,7 @@ trait NodeTrait
             return true;
         }
 
-        return $this->insertAt($this->getLowerBound() + 1);
+        return $this->insertAt($this->getLowerBound() + 1, 0);
     }
 
 
@@ -1168,9 +1167,6 @@ trait NodeTrait
         $this->descendants()->orderByDesc($this->getLftName())->{$method}();
 
         if (! static::usesSoftDelete() || $this->forceDeleting) {
-            // Re-read bounds from DB since descendants deletion may have modified the tree
-            $this->refreshNode();
-
             $lft = $this->getLft();
             $rgt = $this->getRgt();
             $height = $rgt - $lft + 1;
@@ -1235,13 +1231,13 @@ trait NodeTrait
      *
      * @return bool
      */
-    protected function insertAt(int $position): bool
+    protected function insertAt(int $position, ?int $targetDepth = null): bool
     {
         ++static::$actionsPerformed;
 
         $result = $this->exists
-            ? $this->moveNode($position)
-            : $this->insertNode($position);
+            ? $this->moveNode($position, $targetDepth)
+            : $this->insertNode($position, $targetDepth);
 
         return $result;
     }
@@ -1256,16 +1252,16 @@ trait NodeTrait
      *
      * @return bool
      */
-    protected function insertNode(int $position): bool
+    protected function insertNode(int $position, ?int $targetDepth = null): bool
     {
         $height = $this->getNodeHeight();
-        $depth = $this->newNestedSetQuery()->getDepth($position);
+        $depth = $targetDepth ?? ($this->newNestedSetQuery()->getDepth($position) + 1);
 
         $this->newNestedSetQuery()->makeGap($position, 2);
 
         $this->setLft($position);
         $this->setRgt($position + $height - 1);
-        $this->setDepth($depth + 1);
+        $this->setDepth($depth);
 
         return true;
     }
@@ -1299,11 +1295,41 @@ trait NodeTrait
      *
      * @return bool
      */
-    protected function moveNode(int $position): bool
+    protected function moveNode(int $position, ?int $targetDepth = null): bool
     {
-        $updated = $this->newNestedSetQuery()->moveNode($this->getKey(), $position) > 0;
+        $this->refreshNode();
 
-        if ($updated) $this->refreshNode();
+        $lft = $this->getLft();
+        $rgt = $this->getRgt();
+        $height = $rgt - $lft + 1;
+
+        $updated = $this->newNestedSetQuery()->moveNode($this->getKey(), $position, $targetDepth, [
+            $this->getLftName() => $lft,
+            $this->getRgtName() => $rgt,
+            $this->getDepthName() => $this->getDepth(),
+        ]) > 0;
+
+        if ($updated) {
+            // Compute post-move position from pre-move values
+            if ($position > $lft) {
+                $this->setLft($position - $height);
+                $this->setRgt($position - 1);
+            } else {
+                $this->setLft($position);
+                $this->setRgt($position + $height - 1);
+            }
+
+            if ($targetDepth !== null) {
+                $this->setDepth($targetDepth);
+            } else {
+                $this->refreshNode();
+            }
+
+            // Sync originals: mass UPDATE already set these in DB, avoid redundant Eloquent write
+            foreach ([$this->getLftName(), $this->getRgtName(), $this->getDepthName()] as $col) {
+                $this->original[$col] = $this->attributes[$col];
+            }
+        }
 
         return $updated;
     }

@@ -358,9 +358,9 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return int
      */
-    public function moveNode(int|string $key, int $position): int
+    public function moveNode(int|string $key, int $position, ?int $targetDepth = null, array $nodeData = []): int
     {
-        $data = $this->model->newNestedSetQuery()->getNodeData($key, true);
+        $data = $nodeData ?: $this->model->newNestedSetQuery()->getNodeData($key, true);
         $depth = $data[$this->model->getDepthName()];
         $lft = $data[$this->model->getLftName()];
         $rgt = $data[$this->model->getRgtName()];
@@ -390,7 +390,7 @@ class QueryBuilder extends EloquentBuilder
             $distance *= -1;
         }
 
-        $depth = ($this->getDepth($position) + 1) - $depth;
+        $depth = ($targetDepth ?? ($this->getDepth($position) + 1)) - $depth;
         $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
