@@ -29,9 +29,13 @@ class Collection extends BaseCollection
 
             $children = $groupedNodes->get($node->getKey(), [ ]);
 
-            /** @var Model|NodeTrait $child */
-            foreach ($children as $child) {
-                $child->setRelation('parent', clone $node);
+            if ($children) {
+                $parent = clone $node;
+
+                /** @var Model|NodeTrait $child */
+                foreach ($children as $child) {
+                    $child->setRelation('parent', $parent);
+                }
             }
 
             $node->setRelation('children', BaseCollection::make($children));
