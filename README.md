@@ -66,6 +66,7 @@ Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet();
     $table->nestedSetDepth();
+    $table->nestedSetIndex(); // remove if you want own indexes
 });
 
 // Use custom id column and unsignedBigInteger id/parent_id columns
@@ -73,6 +74,7 @@ Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet('uid', 'unsignedBigInteger');
     $table->nestedSetDepth('uid');
+    $table->nestedSetIndex(); // remove if you want own indexes
 });
 
 // Use UUID id/parent_id columns
@@ -80,6 +82,7 @@ Schema::create('table', function (Blueprint $table) {
     ...
     $table->nestedSet('id', 'uuid');
     $table->nestedSetDepth();
+    $table->nestedSetIndex(); // remove if you want own indexes
 });
 ```
 
@@ -88,6 +91,8 @@ To remove the nested set columns from your table in `down()` use:
 ```php
 // To drop columns
 Schema::table('table', function (Blueprint $table) {
+    $table->nestedSetIndex(); // only if you don't have own indexes
+    $table->nestedSetDepth();
     $table->dropNestedSet();
 });
 ```

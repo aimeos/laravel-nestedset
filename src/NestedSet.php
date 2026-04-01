@@ -52,14 +52,11 @@ class NestedSet
         $table->unsignedInteger(self::RGT)->default(0);
 
         $table->{$type}(self::PARENT_ID)->nullable();
-
-        $table->index([self::PARENT_ID, self::LFT]);
-        $table->index([self::LFT, self::RGT]);
     }
 
 
     /**
-     * Add additional nested set columns to the table.
+     * Add nested set depth column to the table.
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      * @param string $idColumn
@@ -71,20 +68,31 @@ class NestedSet
 
 
     /**
+     * Add additional indexes to the table.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     * @param string $idColumn
+     */
+    public static function columnsIndex(Blueprint $table, string $idColumn = 'id'): void
+    {
+        $table->index([self::PARENT_ID, self::LFT]);
+        $table->index([self::LFT, self::RGT]);
+    }
+
+
+    /**
      * Drop NestedSet columns.
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      */
     public static function dropColumns(Blueprint $table): void
     {
-        $table->dropIndex([self::PARENT_ID, self::LFT]);
-        $table->dropIndex([self::LFT, self::RGT]);
         $table->dropColumn([self::LFT, self::RGT, self::PARENT_ID]);
     }
 
 
     /**
-     * Drop additional NestedSet columns.
+     * Drop NestedSet depth column.
      *
      * @param \Illuminate\Database\Schema\Blueprint $table
      */
@@ -92,6 +100,18 @@ class NestedSet
     {
         $table->dropColumn(self::DEPTH);
     }
+
+
+    /**
+     * Drop NestedSet columns.
+     *
+     * @param \Illuminate\Database\Schema\Blueprint $table
+     */
+    public static function dropColumnsIndex(Blueprint $table): void
+    {
+        $table->dropIndex([self::PARENT_ID, self::LFT]);
+        $table->dropIndex([self::LFT, self::RGT]);
+        }
 
 
     /**
