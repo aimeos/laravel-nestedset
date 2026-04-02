@@ -64,8 +64,10 @@ trait NodeTrait
                 return;
             }
 
-            // We will need fresh data to delete node safely
-            $model->refreshNode();
+            if (!static::usesSoftDelete() || $model->forceDeleting) {
+                $model->refreshNode();
+            }
+
             // delete descendants before the node is being deleted physically
             $model->deleteDescendants();
         });
