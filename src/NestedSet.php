@@ -77,6 +77,7 @@ class NestedSet
     {
         $table->index([self::PARENT_ID, self::LFT]);
         $table->index([self::LFT, self::RGT]);
+        $table->index([self::RGT]);
     }
 
 
