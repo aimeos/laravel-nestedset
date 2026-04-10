@@ -341,10 +341,7 @@ class QueryBuilder extends EloquentBuilder
     {
         $params = compact('cut', 'height');
 
-        $query = $this->toBase()->whereNested(function (Builder $inner) use ($cut) {
-            $inner->where($this->model->getLftName(), '>=', $cut);
-            $inner->orWhere($this->model->getRgtName(), '>=', $cut);
-        });
+        $query = $this->toBase()->where($this->model->getRgtName(), '>=', $cut);
 
         return $query->update($this->patch($params));
     }
@@ -394,10 +391,9 @@ class QueryBuilder extends EloquentBuilder
         $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
-        $query = $this->toBase()->where(function (Builder $inner) use ($boundary) {
-            $inner->whereBetween($this->model->getLftName(), $boundary);
-            $inner->orWhereBetween($this->model->getRgtName(), $boundary);
-        });
+        $query = $this->toBase()
+            ->where($this->model->getRgtName(), '>=', $boundary[0])
+            ->where($this->model->getLftName(), '<=', $boundary[1]);
 
         return $query->update($this->patch($params));
     }
