@@ -17,7 +17,26 @@ class AncestorsRelation extends BaseRelation
         if ( ! static::$constraints) return;
 
         $this->query->whereAncestorOf($this->parent)
-            ->applyNestedSetScope();
+            ->applyNestedSetScope()
+            ->defaultOrder();
+    }
+
+
+    /**
+     * Set the constraints for an eager load of the relation.
+     *
+     * Ancestors are returned in hierarchical order (root first) for both lazy
+     * and eager loading.
+     *
+     * @param array $models
+     *
+     * @return void
+     */
+    public function addEagerConstraints(array $models): void
+    {
+        parent::addEagerConstraints($models);
+
+        $this->query->defaultOrder();
     }
 
 
