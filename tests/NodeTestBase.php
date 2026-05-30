@@ -1243,4 +1243,17 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
 
         $this->assertEquals($this->ids[1], $category->getParentId());
     }
+
+    public function testWhereIsRootQualifiesParentId()
+    {
+        $model = new (static::getModelClass());
+        $grammar = $model->getConnection()->getQueryGrammar();
+        $expected = $grammar->wrap($model->getTable() . '.' . $model->getParentIdName());
+
+        $rootSql = static::getModelClass()::query()->whereIsRoot()->toSql();
+        $this->assertStringContainsString($expected, $rootSql);
+
+        $withoutRootSql = static::getModelClass()::query()->withoutRoot()->toSql();
+        $this->assertStringContainsString($expected, $withoutRootSql);
+    }
 }

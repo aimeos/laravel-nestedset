@@ -298,7 +298,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function hasParent(): self
     {
-        $this->query->whereNotNull($this->model->getParentIdName());
+        $this->query->whereNotNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
@@ -712,7 +712,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function whereIsRoot(): self
     {
-        $this->query->whereNull($this->model->getParentIdName());
+        $this->query->whereNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
@@ -787,7 +787,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function withoutRoot(): self
     {
-        $this->query->whereNotNull($this->model->getParentIdName());
+        $this->query->whereNotNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
