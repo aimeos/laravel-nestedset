@@ -546,6 +546,8 @@ Various constraints that can be applied to the query builder:
 * **hasParent()** to get non-root nodes
 * **whereIsLeaf()** to get only leaves
 * **hasChildren()** to get non-leave nodes
+
+> **Note:** Leaf detection is based on the nested set bounds (`_lft`/`_rgt`). Soft-deleting a child does not close the gap in the tree (so it can be restored to its original position), so a node whose children are all soft-deleted is still **not** reported as a leaf. Hard-deleting the children closes the gap and the node becomes a leaf as expected.
 * **whereIsAfter($id)** to get every node (not just siblings) that are after a node with specified id
 * **whereIsBefore($id)** to get every node that is before a node with specified id
 
@@ -712,7 +714,7 @@ Other checks:
 * `$node->isChildOf($other);`
 * `$node->isAncestorOf($other);`
 * `$node->isSiblingOf($other);`
-* `$node->isLeaf()`
+* `$node->isLeaf()` (see the note under [Constraints](#constraints) for soft-delete behavior)
 
 ### Checking consistency
 
