@@ -32,6 +32,11 @@ class Collection extends BaseCollection
             if ($children) {
                 $parent = clone $node;
 
+                // Detach relations from the parent stub so the child->parent
+                // reference can't re-enter the tree and cause infinite
+                // recursion when serializing (e.g. toJson() or Livewire).
+                $parent->setRelations([ ]);
+
                 /** @var Model|NodeTrait $child */
                 foreach ($children as $child) {
                     $child->setRelation('parent', $parent);

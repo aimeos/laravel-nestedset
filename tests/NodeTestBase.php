@@ -1288,4 +1288,21 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals([1, 8, 11], $galaxy->ancestors->pluck('_lft')->all());
         $this->assertEquals(['store', 'mobile', 'samsung'], $galaxy->ancestors->pluck('name')->all());
     }
+
+    public function testLinkedTreeIsJsonSerializable()
+    {
+        $tree = static::getModelClass()::get()->toTree();
+
+        // Must not throw / infinitely recurse over the child->parent back-reference.
+        $json = $tree->toJson();
+        $this->assertJson($json);
+
+        $root = $tree->first();
+        $child = $root->children->first();
+
+        // The parent stub set on a child carries no further relations, so it
+        // cannot re-enter the tree during serialization.
+        $this->assertSame($root->getKey(), $child->parent->getKey());
+        $this->assertEmpty($child->parent->getRelations());
+    }
 }
