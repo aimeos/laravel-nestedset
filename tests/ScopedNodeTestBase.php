@@ -73,7 +73,7 @@ abstract class ScopedNodeTestBase extends \Orchestra\Testbench\TestCase
         foreach ($dbIds as $dbId) {
             foreach ($ids as $key => $id) {
                 if (strcasecmp((string) $id, (string) $dbId) === 0) {
-                    $map[$key] = (string) $dbId;
+                    $map[$key] = $dbId;
                     break;
                 }
             }

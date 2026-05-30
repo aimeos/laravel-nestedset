@@ -23,15 +23,24 @@ class Collection extends BaseCollection
 
         /** @var NodeTrait|Model $node */
         foreach ($this->items as $node) {
-            if ( ! $node->getParentId()) {
+            if ($node->getParentId() === null) {
                 $node->setRelation('parent', null);
             }
 
             $children = $groupedNodes->get($node->getKey(), [ ]);
 
-            /** @var Model|NodeTrait $child */
-            foreach ($children as $child) {
-                $child->setRelation('parent', clone $node);
+            if ($children) {
+                $parent = clone $node;
+
+                // Detach relations from the parent stub so the child->parent
+                // reference can't re-enter the tree and cause infinite
+                // recursion when serializing (e.g. toJson() or Livewire).
+                $parent->setRelations([ ]);
+
+                /** @var Model|NodeTrait $child */
+                foreach ($children as $child) {
+                    $child->setRelation('parent', $parent);
+                }
             }
 
             $node->setRelation('children', BaseCollection::make($children));
@@ -141,7 +150,7 @@ class Collection extends BaseCollection
      */
     protected function flattenTree(self $groupedNodes, int|string|null $parentId): self
     {
-        foreach ($groupedNodes->get($parentId, []) as $node) {
+        foreach ($groupedNodes->get($parentId ?? '', []) as $node) {
             $this->push($node);
 
             $this->flattenTree($groupedNodes, $node->getKey());

@@ -84,6 +84,41 @@ class SiblingsRelation extends BaseRelation
 
 
     /**
+     * @param \Illuminate\Database\Eloquent\Collection $results
+     *
+     * @return array|null
+     */
+    protected function indexResults(\Illuminate\Database\Eloquent\Collection $results): ?array
+    {
+        $index = [];
+
+        foreach ($results as $related) {
+            $index[$related->getParentId() ?? ''][] = $related;
+        }
+
+        return $index;
+    }
+
+
+    /**
+     * @param Model $model
+     * @param array $indexed
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    protected function matchFromIndex(Model $model, array $indexed): \Illuminate\Database\Eloquent\Collection
+    {
+        $candidates = $indexed[$model->getParentId() ?? ''] ?? [];
+
+        if ( ! $this->andSelf) {
+            $candidates = array_filter($candidates, fn($r) => $r->getKey() != $model->getKey());
+        }
+
+        return $this->related->newCollection($candidates);
+    }
+
+
+    /**
      * @param string $hash
      * @param string $table
      * @param string $lft

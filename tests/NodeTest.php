@@ -47,4 +47,36 @@ class NodeTest extends NodeTestBase
             DB::statement("SELECT setval(pg_get_serial_sequence('$prefixedTable', 'id'), coalesce(max(id), 0) + 1, false) FROM \"$prefixedTable\"");
         }
     }
+
+    public function testCountErrorsIgnoresGlobalScope()
+    {
+        // The global scope actually hides the node from normal queries.
+        $this->assertNull(CategoryWithGlobalScope::find($this->ids[8]));
+
+        // A healthy tree reports the same (zero) errors with and without the scope.
+        $this->assertEquals(Category::countErrors(), CategoryWithGlobalScope::countErrors());
+
+        // Corrupt the globally-hidden node (galaxy).
+        Category::where('id', $this->ids[8])->update(['_lft' => 999]);
+
+        // The error must still be detected even though the node is scoped out.
+        $errors = CategoryWithGlobalScope::countErrors();
+        $this->assertGreaterThanOrEqual(1, $errors['oddness']);
+        $this->assertEquals(Category::countErrors(), $errors);
+    }
+
+    public function testFixTreeIgnoresGlobalScope()
+    {
+        Category::where('id', $this->ids[5])->update(['_lft' => 14]);
+
+        $fixed = CategoryWithGlobalScope::fixTree();
+
+        $this->assertTrue($fixed > 0);
+        $this->assertFalse(Category::isBroken());
+
+        // The globally-hidden node is still correctly positioned under its parent.
+        $galaxy = Category::find($this->ids[8]);
+        $samsung = Category::find($this->ids[7]);
+        $this->assertTrue($galaxy->isDescendantOf($samsung));
+    }
 }

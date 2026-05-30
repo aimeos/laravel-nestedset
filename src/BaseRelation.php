@@ -196,14 +196,41 @@ abstract class BaseRelation extends Relation
      */
     public function match(array $models, EloquentCollection $results, $relation)
     {
+        $indexed = $this->indexResults($results);
+
         foreach ($models as $model) {
-            $related = $this->matchForModel($model, $results);
+            $related = $indexed !== null
+                ? $this->matchFromIndex($model, $indexed)
+                : $this->matchForModel($model, $results);
 
             $model->setRelation($relation, $related);
         }
 
         return $models;
     }
+
+    /**
+     * @param EloquentCollection $results
+     *
+     * @return array|null
+     */
+    protected function indexResults(EloquentCollection $results): ?array
+    {
+        return null;
+    }
+
+
+    /**
+     * @param Model $model
+     * @param array $indexed
+     *
+     * @return EloquentCollection
+     */
+    protected function matchFromIndex(Model $model, array $indexed): EloquentCollection
+    {
+        return $this->related->newCollection();
+    }
+
 
     /**
      * @param Model $model

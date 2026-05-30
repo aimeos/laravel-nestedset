@@ -27,12 +27,12 @@ class QueryBuilder extends EloquentBuilder
 
 
     /**
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsAndSelf(int|string $id, array $columns = ['*']): Collection
+    public function ancestorsAndSelf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id, true)->get($columns);
     }
@@ -43,12 +43,12 @@ class QueryBuilder extends EloquentBuilder
      *
      * @since 2.0
      *
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return \Aimeos\Nestedset\Collection
      */
-    public function ancestorsOf(int|string $id, array $columns = ['*']): Collection
+    public function ancestorsOf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->whereAncestorOf($id)->get($columns);
     }
@@ -117,12 +117,12 @@ class QueryBuilder extends EloquentBuilder
 
 
     /**
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      *
      * @return Collection
      */
-    public function descendantsAndSelf(int|string $id, array $columns = ['*']): Collection
+    public function descendantsAndSelf(Model|int|string $id, array $columns = ['*']): Collection
     {
         return $this->descendantsOf($id, $columns, true);
     }
@@ -133,13 +133,13 @@ class QueryBuilder extends EloquentBuilder
      *
      * @since 2.0
      *
-     * @param int|string $id
+     * @param Model|int|string $id
      * @param array $columns
      * @param bool $andSelf
      *
      * @return Collection
      */
-    public function descendantsOf(int|string $id, array $columns = ['*'], bool $andSelf = false): Collection
+    public function descendantsOf(Model|int|string $id, array $columns = ['*'], bool $andSelf = false): Collection
     {
         try {
             return $this->whereDescendantOf($id, 'and', false, $andSelf)->get($columns);
@@ -183,6 +183,7 @@ class QueryBuilder extends EloquentBuilder
 
         $dictionary = $this->model
             ->newNestedSetQuery()
+            ->withoutGlobalScopes()
             ->when($root, function (self $query) use ($root) {
                 return $query->whereDescendantOf($root);
             })
@@ -297,7 +298,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function hasParent(): self
     {
-        $this->query->whereNotNull($this->model->getParentIdName());
+        $this->query->whereNotNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
@@ -341,10 +342,7 @@ class QueryBuilder extends EloquentBuilder
     {
         $params = compact('cut', 'height');
 
-        $query = $this->toBase()->whereNested(function (Builder $inner) use ($cut) {
-            $inner->where($this->model->getLftName(), '>=', $cut);
-            $inner->orWhere($this->model->getRgtName(), '>=', $cut);
-        });
+        $query = $this->toBase()->where($this->model->getRgtName(), '>=', $cut);
 
         return $query->update($this->patch($params));
     }
@@ -358,9 +356,9 @@ class QueryBuilder extends EloquentBuilder
      *
      * @return int
      */
-    public function moveNode(int|string $key, int $position): int
+    public function moveNode(int|string $key, int $position, ?int $targetDepth = null, array $nodeData = []): int
     {
-        $data = $this->model->newNestedSetQuery()->getNodeData($key, true);
+        $data = $nodeData ?: $this->model->newNestedSetQuery()->getNodeData($key, true);
         $depth = $data[$this->model->getDepthName()];
         $lft = $data[$this->model->getLftName()];
         $rgt = $data[$this->model->getRgtName()];
@@ -390,14 +388,13 @@ class QueryBuilder extends EloquentBuilder
             $distance *= -1;
         }
 
-        $depth = ($this->getDepth($position) + 1) - $depth;
+        $depth = ($targetDepth ?? ($this->getDepth($position) + 1)) - $depth;
         $params = compact('lft', 'rgt', 'from', 'to', 'height', 'distance', 'depth');
         $boundary = [ $from, $to ];
 
-        $query = $this->toBase()->where(function (Builder $inner) use ($boundary) {
-            $inner->whereBetween($this->model->getLftName(), $boundary);
-            $inner->orWhereBetween($this->model->getRgtName(), $boundary);
-        });
+        $query = $this->toBase()
+            ->where($this->model->getRgtName(), '>=', $boundary[0])
+            ->where($this->model->getLftName(), '<=', $boundary[1]);
 
         return $query->update($this->patch($params));
     }
@@ -483,6 +480,7 @@ class QueryBuilder extends EloquentBuilder
         }
 
         $existing = $this
+            ->withoutGlobalScopes()
             ->when($root, function (self $query) use ($root) {
                 return $query->whereDescendantOf($root);
             })
@@ -499,11 +497,12 @@ class QueryBuilder extends EloquentBuilder
             if ($delete && ! $this->model->usesSoftDelete()) {
                 $this->model
                     ->newScopedQuery()
+                    ->withoutGlobalScopes()
                     ->whereIn($this->model->getKeyName(), array_keys($existing))
                     ->delete();
             } else {
                 foreach ($existing as $model) {
-                    $dictionary[$model->getParentId()][] = $model;
+                    $dictionary[$model->getParentId() ?? ''][] = $model;
 
                     if ($delete && $this->model->usesSoftDelete() &&
                         ! $model->{$model->getDeletedAtColumn()}
@@ -713,7 +712,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function whereIsRoot(): self
     {
-        $this->query->whereNull($this->model->getParentIdName());
+        $this->query->whereNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
@@ -788,7 +787,7 @@ class QueryBuilder extends EloquentBuilder
      */
     public function withoutRoot(): self
     {
-        $this->query->whereNotNull($this->model->getParentIdName());
+        $this->query->whereNotNull($this->model->getTable() . '.' . $this->model->getParentIdName());
 
         return $this;
     }
@@ -826,7 +825,7 @@ class QueryBuilder extends EloquentBuilder
 
             $model->fill(Arr::except($itemData, 'children'))->save();
 
-            $dictionary[$parentId][] = $model;
+            $dictionary[$parentId ?? ''][] = $model;
 
             if ( ! isset($itemData['children'])) continue;
 
@@ -892,7 +891,7 @@ class QueryBuilder extends EloquentBuilder
 
         return new Expression(
             "case
-                when {$this->model->getLftName()} between {$lft} and {$rgt}
+                when {$this->query->getGrammar()->wrap($this->model->getLftName())} between {$lft} and {$rgt}
                 then {$col}{$depth}
                 else {$col}
             end"
@@ -917,7 +916,7 @@ class QueryBuilder extends EloquentBuilder
 
         // Save nodes that have invalid parent as roots
         while ( ! empty($dictionary)) {
-            $dictionary[null] = reset($dictionary);
+            $dictionary[''] = reset($dictionary);
 
             unset($dictionary[key($dictionary)]);
 
@@ -925,7 +924,7 @@ class QueryBuilder extends EloquentBuilder
         }
 
         if ($parent && ($grown = $cut - $parent->getRgt()) != 0) {
-            $moved = $this->model->newScopedQuery()->makeGap($parent->getRgt() + 1, $grown);
+            $moved = $this->model->newScopedQuery()->withoutGlobalScopes()->makeGap($parent->getRgt() + 1, $grown);
 
             $updated[] = $parent->rawNode($parent->getLft(), $cut, $parent->getParentId(), $parent->getDepth());
         }
@@ -954,6 +953,7 @@ class QueryBuilder extends EloquentBuilder
 
         $query = $this->model
             ->newNestedSetQuery($firstAlias)
+            ->withoutGlobalScopes()
             ->toBase()
             ->from($this->query->raw("{$table} as {$waFirst}, {$table} {$waSecond}"))
             ->whereRaw("{$waFirst}.{$keyName} < {$waSecond}.{$keyName}")
@@ -977,6 +977,7 @@ class QueryBuilder extends EloquentBuilder
     {
         return $this->model
             ->newNestedSetQuery()
+            ->withoutGlobalScopes()
             ->toBase()
             ->whereNested(function (Builder $inner) {
                 $grammar = $this->query->getGrammar();
@@ -989,6 +990,7 @@ class QueryBuilder extends EloquentBuilder
 
                 $existsCheck = $this->model
                     ->newNestedSetQuery()
+                    ->withoutGlobalScopes()
                     ->toBase()
                     ->selectRaw('1')
                     ->from($this->query->raw("{$table} as {$wrappedAlias}"))
@@ -1010,6 +1012,7 @@ class QueryBuilder extends EloquentBuilder
     {
         return $this->model
             ->newNestedSetQuery()
+            ->withoutGlobalScopes()
             ->toBase()
             ->whereNested(function (Builder $inner) {
                 list($lft, $rgt) = $this->wrappedColumns();
@@ -1042,6 +1045,7 @@ class QueryBuilder extends EloquentBuilder
 
         $query = $this->model
             ->newNestedSetQuery('c')
+            ->withoutGlobalScopes()
             ->toBase()
             ->from($this->query->raw("{$table} as {$waChild}, {$table} as {$waParent}, $table as {$waInterm}"))
             ->whereRaw("{$waChild}.{$parentIdName}={$waParent}.{$keyName}")
@@ -1102,13 +1106,14 @@ class QueryBuilder extends EloquentBuilder
     protected static function reorderNodes( array &$dictionary, array &$updated, Model|null $parent = null, int $cut = 1): int
     {
         $parentId = $parent?->getKey();
+        $key = $parentId ?? '';
 
-        if ( ! isset($dictionary[$parentId])) {
+        if ( ! isset($dictionary[$key])) {
             return $cut;
         }
 
         /** @var Model|NodeTrait $model */
-        foreach ($dictionary[$parentId] as $model) {
+        foreach ($dictionary[$key] as $model) {
             $lft = $cut;
             $depth = $parent ? $parent->getDepth() + 1 : 0;
 
@@ -1122,7 +1127,7 @@ class QueryBuilder extends EloquentBuilder
             ++$cut;
         }
 
-        unset($dictionary[$parentId]);
+        unset($dictionary[$key]);
 
         return $cut;
     }

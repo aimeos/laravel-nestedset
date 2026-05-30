@@ -73,7 +73,7 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         foreach ($dbIds as $dbId) {
             foreach ($ids as $key => $id) {
                 if (strcasecmp((string) $id, (string) $dbId) === 0) {
-                    $map[$key] = (string) $dbId;
+                    $map[$key] = $dbId;
                     break;
                 }
             }
@@ -1157,6 +1157,74 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(['nokia', 'samsung', 'galaxy', 'sony', 'lenovo'], $categories);
     }
 
+    public function testMultipleRootNodesAreSiblings()
+    {
+        $store = $this->findCategory('store');
+        $store2 = $this->findCategory('store_2');
+
+        $this->assertTrue($store->isSiblingOf($store2));
+        $this->assertTrue($store2->isSiblingOf($store));
+    }
+
+    public function testMultipleRootNodesAreNotChildren()
+    {
+        $store = $this->findCategory('store');
+        $store2 = $this->findCategory('store_2');
+
+        $this->assertFalse($store->isChildOf($store2));
+        $this->assertFalse($store2->isChildOf($store));
+    }
+
+    public function testMultipleRootNodesInToTree()
+    {
+        $tree = static::getModelClass()::defaultOrder()->get()->toTree();
+
+        $this->assertEquals(2, $tree->count());
+        $this->assertEquals('store', $tree->first()->name);
+        $this->assertEquals('store_2', $tree->last()->name);
+    }
+
+    public function testMultipleRootNodesInToFlatTree()
+    {
+        $tree = static::getModelClass()::defaultOrder()->get()->toFlatTree();
+
+        $this->assertEquals(11, $tree->count());
+        $this->assertEquals('store', $tree->first()->name);
+        $this->assertEquals('store_2', $tree->last()->name);
+    }
+
+    public function testNewRootNodeIsSiblingOfExisting()
+    {
+        $model = static::getModelClass();
+        $node = new $model(['name' => 'store_3']);
+        $node->save();
+
+        $this->assertTreeNotBroken();
+        $this->assertTrue($node->isRoot());
+
+        $store = $this->findCategory('store');
+        $this->assertTrue($node->isSiblingOf($store));
+        $this->assertTrue($store->isSiblingOf($node));
+    }
+
+    public function testSetParentIdToNullKeepsRoot()
+    {
+        $store = $this->findCategory('store');
+        $store->parent_id = null;
+
+        $this->assertTrue($store->isRoot());
+        $this->assertTreeNotBroken();
+    }
+
+    public function testChildIsNotSiblingOfRoot()
+    {
+        $store = $this->findCategory('store');
+        $notebooks = $this->findCategory('notebooks');
+
+        $this->assertFalse($store->isSiblingOf($notebooks));
+        $this->assertFalse($notebooks->isSiblingOf($store));
+    }
+
     public function testReplication()
     {
         $category = $this->findCategory('nokia');
@@ -1174,5 +1242,67 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $category->refreshNode();
 
         $this->assertEquals($this->ids[1], $category->getParentId());
+    }
+
+    public function testWhereIsRootQualifiesParentId()
+    {
+        $model = new (static::getModelClass());
+        $grammar = $model->getConnection()->getQueryGrammar();
+        $expected = $grammar->wrap($model->getTable() . '.' . $model->getParentIdName());
+
+        $rootSql = static::getModelClass()::query()->whereIsRoot()->toSql();
+        $this->assertStringContainsString($expected, $rootSql);
+
+        $withoutRootSql = static::getModelClass()::query()->withoutRoot()->toSql();
+        $this->assertStringContainsString($expected, $withoutRootSql);
+    }
+
+    public function testGetsAncestorsInHierarchicalOrder()
+    {
+        $node = static::getModelClass()::find($this->ids[8]);
+
+        // The relation query must be explicitly ordered by _lft (root first),
+        // not left to incidental database order.
+        $sql = strtolower($node->ancestors()->toSql());
+        $this->assertStringContainsString('order by', $sql);
+        $this->assertStringContainsString('_lft', $sql);
+
+        // galaxy's ancestors are store (_lft 1), mobile (_lft 8), samsung (_lft 11)
+        $ancestors = $node->getAncestors();
+        $this->assertEquals([1, 8, 11], $ancestors->pluck('_lft')->all());
+        $this->assertEquals(['store', 'mobile', 'samsung'], $ancestors->pluck('name')->all());
+    }
+
+    public function testEagerLoadsAncestorsInHierarchicalOrder()
+    {
+        DB::flushQueryLog();
+
+        $galaxy = static::getModelClass()::with('ancestors')->find($this->ids[8]);
+
+        // The eager-load query for ancestors must also be ordered by _lft.
+        $ancestorQuery = collect(DB::connection()->getQueryLog())
+            ->first(fn ($entry) => str_contains(strtolower($entry['query']), 'order by'));
+        $this->assertNotNull($ancestorQuery, 'Eager ancestors query is not ordered.');
+        $this->assertStringContainsString('_lft', strtolower($ancestorQuery['query']));
+
+        $this->assertEquals([1, 8, 11], $galaxy->ancestors->pluck('_lft')->all());
+        $this->assertEquals(['store', 'mobile', 'samsung'], $galaxy->ancestors->pluck('name')->all());
+    }
+
+    public function testLinkedTreeIsJsonSerializable()
+    {
+        $tree = static::getModelClass()::get()->toTree();
+
+        // Must not throw / infinitely recurse over the child->parent back-reference.
+        $json = $tree->toJson();
+        $this->assertJson($json);
+
+        $root = $tree->first();
+        $child = $root->children->first();
+
+        // The parent stub set on a child carries no further relations, so it
+        // cannot re-enter the tree during serialization.
+        $this->assertSame($root->getKey(), $child->parent->getKey());
+        $this->assertEmpty($child->parent->getRelations());
     }
 }
