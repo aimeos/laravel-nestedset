@@ -214,6 +214,36 @@ abstract class ScopedNodeTestBase extends \Orchestra\Testbench\TestCase
         $node = static::getModelClass()::create(['menu_id' => 2, 'parent_id' => $this->ids[5]]);
     }
 
+    public function testInsertionWithParentIdBeforeScope()
+    {
+        $node = static::getModelClass()::create(['parent_id' => $this->ids[5], 'menu_id' => 1]);
+
+        $this->assertEquals($this->ids[5], $node->parent_id);
+        $this->assertEquals(5, $node->getLft());
+
+        $this->assertOtherScopeNotAffected();
+    }
+
+    public function testFillWithParentIdBeforeScope()
+    {
+        $modelClass = static::getModelClass();
+
+        $node = new $modelClass();
+        $node->fill(['parent_id' => $this->ids[5], 'menu_id' => 1])->save();
+
+        $this->assertEquals($this->ids[5], $node->parent_id);
+        $this->assertEquals(5, $node->getLft());
+
+        $this->assertOtherScopeNotAffected();
+    }
+
+    public function testInsertionToParentFromOtherScopeWithParentIdBeforeScope()
+    {
+        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+
+        $node = static::getModelClass()::create(['parent_id' => $this->ids[5], 'menu_id' => 2]);
+    }
+
     public function testDeletion()
     {
         $node = static::getModelClass()::find($this->ids[2])->delete();
