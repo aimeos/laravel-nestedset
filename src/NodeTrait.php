@@ -713,7 +713,7 @@ trait NodeTrait
      */
     public function isSiblingOf(self $other): bool
     {
-        return $this->getParentId() && $this->getParentId() == $other->getParentId();
+        return $this->getParentId() == $other->getParentId();
     }
 
 
