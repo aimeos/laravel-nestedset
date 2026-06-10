@@ -1004,12 +1004,17 @@ trait NodeTrait
         if ($this->getParentId() == $value) return $this;
 
         if ($value) {
-            $this->appendToNode($this->newScopedQuery()->findOrFail($value));
-        } else {
-            $this->makeRoot();
+            // Defer resolving the parent node until the model is saved. Resolving
+            // it here would query the database immediately, before sibling scope
+            // attributes assigned after parent_id (e.g. during create() or fill()
+            // when parent_id precedes them in the array) are populated, causing the
+            // scoped lookup to miss the parent and throw a ModelNotFoundException.
+            $this->setParentId($value);
+
+            return $this->setNodeAction('appendToParentId', $value);
         }
 
-        return $this;
+        return $this->makeRoot();
     }
 
 
@@ -1106,6 +1111,30 @@ trait NodeTrait
         $node->refreshNode();
 
         return $this->insertAt($after ? $node->getRgt() + 1 : $node->getLft(), $node->getDepth());
+    }
+
+
+    /**
+     * Resolve the parent by its id and append the node to it.
+     *
+     * Deferred from the parent_id mutator so that the scoped parent lookup runs
+     * with all scope attributes populated.
+     *
+     * @param int|string $parentId
+     *
+     * @return bool
+     */
+    protected function actionAppendToParentId(int|string $parentId): bool
+    {
+        $parent = $this->newScopedQuery()->findOrFail($parentId);
+
+        $this->assertNodeExists($parent)
+            ->assertNotDescendant($parent)
+            ->assertSameScope($parent);
+
+        $this->setParent($parent)->dirtyBounds();
+
+        return $this->actionAppendOrPrepend($parent);
     }
 
 
