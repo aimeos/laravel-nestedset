@@ -80,6 +80,37 @@ class NodeTest extends NodeTestBase
         $this->assertTrue($galaxy->isDescendantOf($samsung));
     }
 
+    public function testFixTreeHandlesDeepParentChainsIteratively()
+    {
+        DB::table(static::getTableName())->delete();
+
+        $rows = [];
+        $count = 75;
+
+        for ($i = 1; $i <= $count; ++$i) {
+            $rows[] = [
+                'id' => $i,
+                'name' => 'node '.$i,
+                '_lft' => 0,
+                '_rgt' => 0,
+                'parent_id' => $i === 1 ? null : $i - 1,
+                'depth' => 0,
+            ];
+        }
+
+        $this->seedTable(static::getTableName(), $rows);
+
+        $fixed = Category::fixTree();
+        $last = Category::find($count);
+        $root = Category::find(1);
+
+        $this->assertEquals($count, $fixed);
+        $this->assertFalse(Category::isBroken());
+        $this->assertEquals($count - 1, $last->getDepth());
+        $this->assertEquals([$count, $count + 1], $last->getBounds());
+        $this->assertEquals([1, $count * 2], $root->getBounds());
+    }
+
     public function testEventedDescendantDeletesAreChunked()
     {
         $node = ChunkedCategory::find($this->ids[5]);

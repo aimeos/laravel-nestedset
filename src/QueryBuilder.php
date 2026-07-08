@@ -1112,24 +1112,83 @@ class QueryBuilder extends EloquentBuilder
             return $cut;
         }
 
-        /** @var Model|NodeTrait $model */
-        foreach ($dictionary[$key] as $model) {
-            $lft = $cut;
-            $depth = $parent ? $parent->getDepth() + 1 : 0;
-
-            $model->setDepth($depth);
-            $cut = self::reorderNodes($dictionary, $updated, $model, $cut + 1);
-
-            if ($model->rawNode($lft, $cut, $parentId, $depth)->isDirty()) {
-                $updated[] = $model;
-            }
-
-            ++$cut;
-        }
-
+        $stack = [[
+            'type' => 'children',
+            'parent' => $parent,
+            'parentId' => $parentId,
+            'children' => self::dictionaryNodes($dictionary[$key]),
+            'index' => 0,
+        ]];
         unset($dictionary[$key]);
 
+        while ($stack) {
+            $frameIndex = array_key_last($stack);
+
+            if ($stack[$frameIndex]['type'] === 'close') {
+                $frame = array_pop($stack);
+                /** @var Model|NodeTrait $model */
+                $model = $frame['model'];
+
+                if ($model->rawNode($frame['lft'], $cut, $frame['parentId'], $frame['depth'])->isDirty()) {
+                    $updated[] = $model;
+                }
+
+                ++$cut;
+                continue;
+            }
+
+            if ($stack[$frameIndex]['index'] >= count($stack[$frameIndex]['children'])) {
+                array_pop($stack);
+                continue;
+            }
+
+            /** @var Model|NodeTrait $model */
+            $model = $stack[$frameIndex]['children'][$stack[$frameIndex]['index']];
+            ++$stack[$frameIndex]['index'];
+
+            $lft = $cut;
+            $depth = $stack[$frameIndex]['parent']
+                ? $stack[$frameIndex]['parent']->getDepth() + 1
+                : 0;
+
+            $model->setDepth($depth);
+            ++$cut;
+
+            $stack[] = [
+                'type' => 'close',
+                'model' => $model,
+                'lft' => $lft,
+                'parentId' => $stack[$frameIndex]['parentId'],
+                'depth' => $depth,
+            ];
+
+            $childKey = $model->getKey();
+
+            if (isset($dictionary[$childKey])) {
+                $stack[] = [
+                    'type' => 'children',
+                    'parent' => $model,
+                    'parentId' => $childKey,
+                    'children' => self::dictionaryNodes($dictionary[$childKey]),
+                    'index' => 0,
+                ];
+
+                unset($dictionary[$childKey]);
+            }
+        }
+
         return $cut;
+    }
+
+
+    /**
+     * @param array|\Illuminate\Support\Collection $nodes
+     *
+     * @return array
+     */
+    protected static function dictionaryNodes(array|\Illuminate\Support\Collection $nodes): array
+    {
+        return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : array_values($nodes);
     }
 
 
