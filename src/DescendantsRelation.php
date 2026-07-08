@@ -104,6 +104,7 @@ class DescendantsRelation extends BaseRelation
         return [
             'entries' => $entries,
             'lfts' => array_column($entries, 'lft'),
+            'preserves_order' => $this->preservesResultOrder($entries),
         ];
     }
 
@@ -135,9 +136,32 @@ class DescendantsRelation extends BaseRelation
             }
         }
 
-        usort($matches, fn ($a, $b) => $a['position'] <=> $b['position']);
+        if ( ! $indexed['preserves_order']) {
+            usort($matches, fn ($a, $b) => $a['position'] <=> $b['position']);
+        }
 
         return $this->related->newCollection(array_column($matches, 'related'));
+    }
+
+
+    /**
+     * @param array $entries
+     *
+     * @return bool
+     */
+    protected function preservesResultOrder(array $entries): bool
+    {
+        $last = -1;
+
+        foreach ($entries as $entry) {
+            if ($entry['position'] < $last) {
+                return false;
+            }
+
+            $last = $entry['position'];
+        }
+
+        return true;
     }
 
 
