@@ -798,6 +798,17 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(23, $node->getLft());
     }
 
+    public function testRawNodePendingActionSaves()
+    {
+        $model = static::getModelClass();
+        $node = new $model(['name' => 'raw']);
+
+        $node->rawNode(23, 24, null, 0);
+
+        $this->assertTrue($node->save());
+        $this->assertEquals([23, 24], $node->fresh()->getBounds());
+    }
+
     public function testCreatesViaRelationship()
     {
         $node = $this->findCategory('apple');

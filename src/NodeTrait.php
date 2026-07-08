@@ -1235,7 +1235,7 @@ trait NodeTrait
 
         $this->pending = [];
 
-        $this->moved = call_user_func_array([ $this, $method ], $parameters);
+        $this->moved = $this->{$method}(...$parameters);
     }
 
 
