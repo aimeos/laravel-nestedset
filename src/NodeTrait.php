@@ -29,6 +29,13 @@ trait NodeTrait
     public static ?Carbon $deletedAt = null;
 
     /**
+     * Cache SoftDeletes capability checks per model class.
+     *
+     * @var array<class-string, bool>
+     */
+    protected static array $usesSoftDeleteCache = [];
+
+    /**
      * Whether the node is being deleted as part of a subtree removal.
      *
      * @var bool
@@ -139,7 +146,8 @@ trait NodeTrait
      */
     public static function usesSoftDelete(): bool
     {
-        return method_exists(static::class, 'bootSoftDeletes');
+        return static::$usesSoftDeleteCache[static::class]
+            ??= method_exists(static::class, 'bootSoftDeletes');
     }
 
 
