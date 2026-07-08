@@ -679,6 +679,21 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals('notebooks', $next->name);
     }
 
+    public function testWhereIsBeforeAndAfterById()
+    {
+        $before = static::getModelClass()::whereIsBefore($this->ids[4])
+            ->defaultOrder()
+            ->pluck('name')
+            ->all();
+        $after = static::getModelClass()::whereIsAfter($this->ids[4])
+            ->defaultOrder()
+            ->pluck('name')
+            ->all();
+
+        $this->assertEquals(['store', 'notebooks', 'apple'], $before);
+        $this->assertEquals(['mobile', 'nokia', 'samsung', 'galaxy', 'sony', 'lenovo', 'store_2'], $after);
+    }
+
     public function testMultipleAppendageWorks()
     {
         $parent = $this->findCategory('mobile');

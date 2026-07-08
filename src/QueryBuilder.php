@@ -1262,7 +1262,8 @@ class QueryBuilder extends EloquentBuilder
                 ->toBase()
                 ->select('_n.'.$this->model->getLftName())
                 ->from($this->model->getTable().' as _n')
-                ->where('_n.'.$this->model->getKeyName(), '=', $id);
+                ->where('_n.'.$this->model->getKeyName(), '=', $id)
+                ->limit(1);
 
             $this->query->mergeBindings($valueQuery);
 
