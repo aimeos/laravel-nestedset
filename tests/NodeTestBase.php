@@ -1190,6 +1190,23 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals($this->ids[3], $node->getParentId());
     }
 
+    public function testRebuildTreeHandlesNestedPayloadAttributes()
+    {
+        static::getModelClass()::rebuildTree([
+            [
+                'id' => $this->ids[1],
+                'name' => 'store v2',
+                'children' => [
+                    ['id' => $this->ids[2], 'name' => 'notebooks v2'],
+                ],
+            ],
+        ]);
+
+        $this->assertTreeNotBroken();
+        $this->assertEquals('store v2', static::getModelClass()::find($this->ids[1])->name);
+        $this->assertEquals('notebooks v2', static::getModelClass()::find($this->ids[2])->name);
+    }
+
     public function testRebuildSubtree()
     {
         $fixed = static::getModelClass()::rebuildSubtree(static::getModelClass()::find($this->ids[7]), [

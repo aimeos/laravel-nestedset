@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Arr;
 use LogicException;
 
 
@@ -844,7 +843,10 @@ class QueryBuilder extends EloquentBuilder
                 unset($existing[$key]);
             }
 
-            $model->fill(Arr::except($itemData, 'children'))->save();
+            $attributes = $itemData;
+            unset($attributes['children']);
+
+            $model->fill($attributes)->save();
 
             $dictionary[$parentId ?? ''][] = $model;
 
