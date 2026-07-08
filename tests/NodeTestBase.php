@@ -756,6 +756,26 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(1, $errors['missing_parent']);
     }
 
+    public function testIsBrokenShortCircuitsOnOddness()
+    {
+        static::getModelClass()::where('id', '=', $this->ids[5])->update([
+            '_lft' => 14,
+            '_rgt' => 13,
+        ]);
+
+        DB::flushQueryLog();
+
+        $this->assertTrue(static::getModelClass()::isBroken());
+
+        $queries = DB::connection()->getQueryLog();
+        $sql = strtolower($queries[0]['query']);
+
+        $this->assertCount(1, $queries);
+        $this->assertStringContainsString('_lft', $sql);
+        $this->assertStringNotContainsString('c1', $sql);
+        $this->assertStringNotContainsString('join', $sql);
+    }
+
     public function testCreatesNode()
     {
         $node = static::getModelClass()::create(['name' => 'test']);

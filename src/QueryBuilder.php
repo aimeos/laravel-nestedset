@@ -323,7 +323,10 @@ class QueryBuilder extends EloquentBuilder
      */
     public function isBroken(): bool
     {
-        return $this->getTotalErrors() > 0;
+        return $this->getOdnessQuery()->exists()
+            || $this->getDuplicatesQuery()->exists()
+            || $this->getWrongParentQuery()->exists()
+            || $this->getMissingParentQuery()->exists();
     }
 
 
