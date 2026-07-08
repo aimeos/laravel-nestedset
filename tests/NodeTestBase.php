@@ -582,6 +582,16 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(4, count($root->children));
     }
 
+    public function testToTreeKeepsEmptyChildrenRelationOnLeaves()
+    {
+        $tree = static::getModelClass()::defaultOrder()->get()->toTree();
+        $notebooks = $tree->first()->children->firstWhere('name', 'notebooks');
+        $apple = $notebooks->children->firstWhere('name', 'apple');
+
+        $this->assertTrue($apple->relationLoaded('children'));
+        $this->assertEquals(0, $apple->children->count());
+    }
+
     public function testToTreeBuildsWithCustomOrder()
     {
         $tree = static::getModelClass()::whereBetween('_lft', array(8, 17))

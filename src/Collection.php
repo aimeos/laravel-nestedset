@@ -99,10 +99,6 @@ class Collection extends BaseCollection
             if ($node->getParentId() == $root) {
                 $items[] = $node;
             }
-
-            if($node->isLeaf()){
-                $node->setRelation('children', new BaseCollection);
-            }
         }
 
         return new self($items);
