@@ -15,3 +15,13 @@ class Category extends Model {
         static::$actionsPerformed = 0;
     }
 }
+
+class ChunkedCategory extends Category
+{
+    protected $table = 'categories';
+
+    protected function getDescendantDeleteChunkSize(): int
+    {
+        return 2;
+    }
+}

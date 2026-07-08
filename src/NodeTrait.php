@@ -1270,10 +1270,7 @@ trait NodeTrait
                 $query->withTrashed();
             }
 
-            $query->get()->each(function ($model) use ($method) {
-                $model->deletingAsDescendant = true;
-                $model->{$method}();
-            });
+            $this->deleteDescendantsWithEvents($query, $method);
         } else {
             $query->{$method}();
         }
@@ -1290,6 +1287,48 @@ trait NodeTrait
 
             static::$actionsPerformed++;
         }
+    }
+
+
+    /**
+     * Delete descendants in chunks while still firing descendant model events.
+     *
+     * @param DescendantsRelation $query
+     * @param string $method
+     */
+    protected function deleteDescendantsWithEvents(DescendantsRelation $query, string $method): void
+    {
+        $lftName = $this->getLftName();
+        $lastLft = null;
+        $chunkSize = max(1, $this->getDescendantDeleteChunkSize());
+
+        do {
+            $chunkQuery = clone $query;
+
+            if ($lastLft !== null) {
+                $chunkQuery->where($lftName, '<', $lastLft);
+            }
+
+            $models = $chunkQuery->limit($chunkSize)->get();
+
+            foreach ($models as $model) {
+                $model->deletingAsDescendant = true;
+                $model->{$method}();
+            }
+
+            $lastLft = $models->last()?->getLft();
+        } while ($models->count() === $chunkSize && $lastLft !== null);
+    }
+
+
+    /**
+     * The number of descendants loaded per evented delete chunk.
+     *
+     * @return int
+     */
+    protected function getDescendantDeleteChunkSize(): int
+    {
+        return 1000;
     }
 
 

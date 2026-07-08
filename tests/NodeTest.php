@@ -79,4 +79,31 @@ class NodeTest extends NodeTestBase
         $samsung = Category::find($this->ids[7]);
         $this->assertTrue($galaxy->isDescendantOf($samsung));
     }
+
+    public function testEventedDescendantDeletesAreChunked()
+    {
+        $node = ChunkedCategory::find($this->ids[5]);
+
+        DB::flushQueryLog();
+
+        $node->delete();
+
+        $selects = array_filter(DB::connection()->getQueryLog(), function ($entry) {
+            $query = strtolower($entry['query']);
+
+            return str_starts_with($query, 'select')
+                && str_contains($query, '_lft')
+                && str_contains($query, 'order by');
+        });
+
+        $this->assertGreaterThanOrEqual(3, count($selects));
+        $this->assertEquals(0, Category::whereIn('id', [
+            $this->ids[5],
+            $this->ids[6],
+            $this->ids[7],
+            $this->ids[8],
+            $this->ids[9],
+            $this->ids[10],
+        ])->count());
+    }
 }
