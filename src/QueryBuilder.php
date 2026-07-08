@@ -188,6 +188,75 @@ class QueryBuilder extends EloquentBuilder
 
 
     /**
+     * @return bool
+     */
+    protected function hasParentErrors(): bool
+    {
+        $keyName = $this->model->getKeyName();
+        $parentIdName = $this->model->getParentIdName();
+        $lftName = $this->model->getLftName();
+        $rgtName = $this->model->getRgtName();
+
+        $rows = $this->model
+            ->newNestedSetQuery()
+            ->withoutGlobalScopes()
+            ->toBase()
+            ->get([$keyName, $parentIdName, $lftName, $rgtName]);
+
+        $nodes = [];
+        $nodeByKey = [];
+
+        foreach ($rows as $row) {
+            $index = count($nodes);
+            $key = $this->dictionaryKey($row->{$keyName});
+
+            $nodes[] = [
+                'key' => $key,
+                'parent' => $row->{$parentIdName},
+                'lft' => (int) $row->{$lftName},
+                'rgt' => (int) $row->{$rgtName},
+            ];
+            $nodeByKey[$key] = $index;
+        }
+
+        foreach ($nodes as $index => $node) {
+            if ($node['parent'] === null) {
+                continue;
+            }
+
+            $parentKey = $this->dictionaryKey($node['parent']);
+
+            if ( ! isset($nodeByKey[$parentKey])) {
+                return true;
+            }
+
+            $parentIndex = $nodeByKey[$parentKey];
+            $parent = $nodes[$parentIndex];
+
+            if ($node['lft'] < $parent['lft'] || $node['lft'] > $parent['rgt']) {
+                return true;
+            }
+
+            foreach ($nodes as $intermediateIndex => $intermediate) {
+                if ($intermediateIndex === $parentIndex || $intermediateIndex === $index) {
+                    continue;
+                }
+
+                if ($node['lft'] >= $intermediate['lft'] &&
+                    $node['lft'] <= $intermediate['rgt'] &&
+                    $intermediate['lft'] >= $parent['lft'] &&
+                    $intermediate['lft'] <= $parent['rgt']
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
      * Order by node position.
      *
      * @param string $dir
@@ -404,10 +473,11 @@ class QueryBuilder extends EloquentBuilder
      */
     public function isBroken(): bool
     {
-        return $this->getOdnessQuery()->exists()
-            || $this->getDuplicatesQuery()->exists()
-            || $this->getWrongParentQuery()->exists()
-            || $this->getMissingParentQuery()->exists();
+        if ($this->getOdnessQuery()->exists() || $this->getDuplicatesQuery()->exists()) {
+            return true;
+        }
+
+        return $this->hasParentErrors();
     }
 
 
