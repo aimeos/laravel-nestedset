@@ -77,6 +77,10 @@ class NestedSet
     /**
      * Add additional indexes to the table.
      *
+     * For scoped trees, create your own indexes with scope columns prepended,
+     * for example: [scope..., parent_id, _lft], [scope..., _lft, _rgt],
+     * and [scope..., _rgt].
+     *
      * @param \Illuminate\Database\Schema\Blueprint $table
      * @param string $idColumn
      */
