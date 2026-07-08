@@ -19,7 +19,21 @@ class Collection extends BaseCollection
     {
         if ($this->isEmpty()) return $this;
 
-        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
+        [$groupedNodes] = $this->groupNodesByParent();
+
+        return $this->linkNodesFromGroups($groupedNodes);
+    }
+
+
+    /**
+     * Fill `parent` and `children` relationships from pre-grouped nodes.
+     *
+     * @param array $groupedNodes
+     *
+     * @return $this
+     */
+    protected function linkNodesFromGroups(array $groupedNodes): self
+    {
 
         /** @var NodeTrait|Model $node */
         foreach ($this->items as $node) {
@@ -27,7 +41,7 @@ class Collection extends BaseCollection
                 $node->setRelation('parent', null);
             }
 
-            $children = $groupedNodes->get($node->getKey(), [ ]);
+            $children = $groupedNodes[$this->groupKey($node->getKey())] ?? [ ];
 
             if ($children) {
                 $parent = clone $node;
@@ -50,7 +64,6 @@ class Collection extends BaseCollection
     }
 
 
-
     /**
      * Build a list of nodes that retain the order that they were pulled from
      * the database.
@@ -65,9 +78,9 @@ class Collection extends BaseCollection
 
         if ($this->isEmpty()) return $result;
 
-        $groupedNodes = $this->groupBy($this->first()->getParentIdName());
+        [$groupedNodes, $root] = $this->groupNodesByParent($root ?: null, true);
 
-        return $result->flattenTree($groupedNodes, $this->getRootNodeId($root ?: null));
+        return $result->flattenTree($groupedNodes, $root);
     }
 
 
@@ -88,20 +101,42 @@ class Collection extends BaseCollection
             return new self;
         }
 
-        $this->linkNodes();
+        [$groupedNodes, $root] = $this->groupNodesByParent($root ?: null, true);
 
-        $items = [ ];
+        $this->linkNodesFromGroups($groupedNodes);
 
-        $root = $this->getRootNodeId($root ?: null);
+        return new self($groupedNodes[$this->groupKey($root)] ?? [ ]);
+    }
+
+
+    /**
+     * @param Model|int|string|null $root
+     * @param bool $findRoot
+     *
+     * @return array
+     */
+    protected function groupNodesByParent(Model|int|string|null $root = null, bool $findRoot = false): array
+    {
+        $groupedNodes = [ ];
+        $rootIsKnown = false;
+        $leastValue = null;
+
+        if ($findRoot) {
+            [$root, $rootIsKnown] = $this->normalizeRootNodeId($root);
+        }
 
         /** @var Model|NodeTrait $node */
         foreach ($this->items as $node) {
-            if ($node->getParentId() == $root) {
-                $items[] = $node;
+            $parentId = $node->getParentId();
+            $groupedNodes[$this->groupKey($parentId)][] = $node;
+
+            if ($findRoot && ! $rootIsKnown && ($leastValue === null || $node->getLft() < $leastValue)) {
+                $leastValue = $node->getLft();
+                $root = $parentId;
             }
         }
 
-        return new self($items);
+        return [$groupedNodes, $root];
     }
 
 
@@ -112,16 +147,14 @@ class Collection extends BaseCollection
      */
     protected function getRootNodeId(Model|int|string|null $root = null): int|string|null
     {
-        if (NestedSet::isNode($root)) {
-            return $root->getKey();
-        }
-
-        if ($root) {
-            return $root;
-        }
+        [$root, $rootIsKnown] = $this->normalizeRootNodeId($root);
 
         // If root node is not specified we take parent id of node with
         // least lft value as root node id.
+        if ($rootIsKnown) {
+            return $root;
+        }
+
         $leastValue = null;
 
         /** @var Model|NodeTrait $node */
@@ -139,21 +172,28 @@ class Collection extends BaseCollection
     /**
      * Flatten a tree into a non recursive array.
      *
-     * @param Collection $groupedNodes
+     * @param array $groupedNodes
      * @param int|string|null $parentId
      *
      * @return $this
      */
-    protected function flattenTree(self $groupedNodes, int|string|null $parentId): self
+    protected function flattenTree(array $groupedNodes, int|string|null $parentId): self
     {
-        $stack = array_reverse($this->nodesForParent($groupedNodes, $parentId));
+        $stack = [ ];
+        $children = $this->nodesForParent($groupedNodes, $parentId);
+
+        for ($i = count($children) - 1; $i >= 0; --$i) {
+            $stack[] = $children[$i];
+        }
 
         while ($stack) {
             $node = array_pop($stack);
             $this->push($node);
 
-            foreach (array_reverse($this->nodesForParent($groupedNodes, $node->getKey())) as $child) {
-                $stack[] = $child;
+            $children = $this->nodesForParent($groupedNodes, $node->getKey());
+
+            for ($i = count($children) - 1; $i >= 0; --$i) {
+                $stack[] = $children[$i];
             }
         }
 
@@ -162,16 +202,44 @@ class Collection extends BaseCollection
 
 
     /**
-     * @param Collection $groupedNodes
+     * @param Model|int|string|null $root
+     *
+     * @return array
+     */
+    protected function normalizeRootNodeId(Model|int|string|null $root = null): array
+    {
+        if (NestedSet::isNode($root)) {
+            return [$root->getKey(), true];
+        }
+
+        if ($root) {
+            return [$root, true];
+        }
+
+        return [null, false];
+    }
+
+
+    /**
+     * @param int|string|null $key
+     *
+     * @return int|string
+     */
+    protected function groupKey(int|string|null $key): int|string
+    {
+        return $key ?? '';
+    }
+
+
+    /**
+     * @param array $groupedNodes
      * @param int|string|null $parentId
      *
      * @return array
      */
-    protected function nodesForParent(self $groupedNodes, int|string|null $parentId): array
+    protected function nodesForParent(array $groupedNodes, int|string|null $parentId): array
     {
-        $nodes = $groupedNodes->get($parentId ?? '', []);
-
-        return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : (array) $nodes;
+        return $groupedNodes[$this->groupKey($parentId)] ?? [ ];
     }
 
 }

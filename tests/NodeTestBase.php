@@ -615,6 +615,24 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals($root->getAttributes(), $root->children->first()->parent->getAttributes());
     }
 
+    public function testLinkNodesKeepsCollectionOrderForChildren()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [
+            $this->ids[5],
+            $this->ids[6],
+            $this->ids[9],
+            $this->ids[10],
+        ])->orderBy('name')->get();
+
+        $nodes->linkNodes();
+
+        $mobile = $nodes->find($this->ids[5]);
+        $lenovo = $nodes->find($this->ids[10]);
+
+        $this->assertEquals(['lenovo', 'nokia', 'sony'], $mobile->children->pluck('name')->all());
+        $this->assertEquals($mobile->getAttributes(), $lenovo->parent->getAttributes());
+    }
+
     public function testToTreeWithSpecifiedRoot()
     {
         $node = $this->findCategory('mobile');
