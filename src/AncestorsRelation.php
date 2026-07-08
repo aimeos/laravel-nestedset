@@ -61,19 +61,29 @@ class AncestorsRelation extends BaseRelation
     protected function prepareEagerModels(array $models): array
     {
         $models = parent::prepareEagerModels($models);
+
+        usort($models, function (Model $a, Model $b) {
+            return [$a->getLft(), -$a->getRgt()] <=> [$b->getLft(), -$b->getRgt()];
+        });
+
         $result = [];
+        $active = [];
 
         foreach ($models as $model) {
-            foreach ($models as $other) {
-                if ($model !== $other && $other->isDescendantOf($model)) {
-                    continue 2;
+            while ($active && end($active)->getRgt() < $model->getLft()) {
+                $result[] = array_pop($active);
+            }
+
+            for ($i = count($active) - 1; $i >= 0; --$i) {
+                if ($model->isDescendantOf($active[$i])) {
+                    array_splice($active, $i, 1);
                 }
             }
 
-            $result[] = $model;
+            $active[] = $model;
         }
 
-        return $result;
+        return array_merge($result, $active);
     }
 
 

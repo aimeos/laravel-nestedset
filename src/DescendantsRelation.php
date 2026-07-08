@@ -45,15 +45,21 @@ class DescendantsRelation extends BaseRelation
         });
 
         $result = [];
+        $active = [];
 
         foreach ($models as $model) {
-            foreach ($result as $ancestor) {
-                if ($model->isDescendantOf($ancestor)) {
+            while ($active && end($active)->getRgt() < $model->getLft()) {
+                array_pop($active);
+            }
+
+            for ($i = count($active) - 1; $i >= 0; --$i) {
+                if ($model->isDescendantOf($active[$i])) {
                     continue 2;
                 }
             }
 
             $result[] = $model;
+            $active[] = $model;
         }
 
         return $result;
