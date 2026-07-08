@@ -2,7 +2,6 @@
 
 namespace Aimeos\Nestedset;
 
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 
 
@@ -28,6 +27,35 @@ class DescendantsRelation extends BaseRelation
     protected function addEagerConstraint(QueryBuilder $query, Model $model): void
     {
         $query->orWhereDescendantOf($model);
+    }
+
+
+    /**
+     * @param array $models
+     *
+     * @return array
+     */
+    protected function prepareEagerModels(array $models): array
+    {
+        $models = parent::prepareEagerModels($models);
+
+        usort($models, function (Model $a, Model $b) {
+            return [$a->getLft(), -$a->getRgt()] <=> [$b->getLft(), -$b->getRgt()];
+        });
+
+        $result = [];
+
+        foreach ($models as $model) {
+            foreach ($result as $ancestor) {
+                if ($model->isDescendantOf($ancestor)) {
+                    continue 2;
+                }
+            }
+
+            $result[] = $model;
+        }
+
+        return $result;
     }
 
 

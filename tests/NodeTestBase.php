@@ -892,6 +892,25 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertTrue($nodes->first()->relationLoaded('descendants'));
     }
 
+    public function testNestedDescendantEagerLoadConstraintsAreDeduplicated()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[1], $this->ids[5]])
+            ->defaultOrder()
+            ->get();
+
+        DB::flushQueryLog();
+
+        $nodes->load('descendants');
+
+        $queries = DB::connection()->getQueryLog();
+        $relationQuery = strtolower(end($queries)['query']);
+
+        $this->assertEquals(1, substr_count($relationQuery, ' between '));
+        $this->assertEquals(9, $nodes->find($this->ids[1])->descendants->count());
+        $this->assertEquals(5, $nodes->find($this->ids[5])->descendants->count());
+        $this->assertTrue($nodes->find($this->ids[5])->descendants->contains('id', $this->ids[8]));
+    }
+
     public function testDescendantsRelationQuery()
     {
         $nodes = static::getModelClass()::has('descendants')->whereIn('id', [$this->ids[2], $this->ids[3]])->get();
@@ -1105,6 +1124,24 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         }
 
         $this->assertEquals($expectedShape, $output);
+    }
+
+    public function testNestedAncestorEagerLoadConstraintsAreDeduplicated()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[5], $this->ids[8]])
+            ->defaultOrder()
+            ->get();
+
+        DB::flushQueryLog();
+
+        $nodes->load('ancestors');
+
+        $queries = DB::connection()->getQueryLog();
+        $relationQuery = strtolower(end($queries)['query']);
+
+        $this->assertEquals(1, substr_count($relationQuery, ' between '));
+        $this->assertEquals(['store'], $nodes->find($this->ids[5])->ancestors->pluck('name')->all());
+        $this->assertEquals(['store', 'mobile', 'samsung'], $nodes->find($this->ids[8])->ancestors->pluck('name')->all());
     }
 
     public function testLazyLoadAncestors()

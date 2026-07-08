@@ -82,6 +82,14 @@ abstract class BaseRelation extends Relation
      */
     public function addEagerConstraints(array $models): void
     {
+        $models = $this->prepareEagerModels($models);
+
+        if (empty($models)) {
+            $this->query->whereRaw('0 = 1');
+
+            return;
+        }
+
         $this->query->whereNested(function (Builder $inner) use ($models) {
             // We will use this query in order to apply constraints to the
             // base query builder
@@ -221,6 +229,35 @@ abstract class BaseRelation extends Relation
 
 
     /**
+     * @param array $models
+     *
+     * @return array
+     */
+    protected function prepareEagerModels(array $models): array
+    {
+        $unique = [];
+
+        foreach ($models as $model) {
+            $key = $this->getEagerModelKey($model);
+            $unique[$key] = $model;
+        }
+
+        return array_values($unique);
+    }
+
+
+    /**
+     * @param Model $model
+     *
+     * @return string
+     */
+    protected function getEagerModelKey(Model $model): string
+    {
+        return get_class($model).'|'.($model->getKey() ?? spl_object_id($model));
+    }
+
+
+    /**
      * @param Model $model
      * @param array $indexed
      *
@@ -250,4 +287,5 @@ abstract class BaseRelation extends Relation
 
         return $result;
     }
+
 }

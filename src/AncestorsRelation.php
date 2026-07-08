@@ -53,6 +53,30 @@ class AncestorsRelation extends BaseRelation
 
 
     /**
+     * @param array $models
+     *
+     * @return array
+     */
+    protected function prepareEagerModels(array $models): array
+    {
+        $models = parent::prepareEagerModels($models);
+        $result = [];
+
+        foreach ($models as $model) {
+            foreach ($models as $other) {
+                if ($model !== $other && $other->isDescendantOf($model)) {
+                    continue 2;
+                }
+            }
+
+            $result[] = $model;
+        }
+
+        return $result;
+    }
+
+
+    /**
      * @param Model $model
      * @param Model $related
      *
