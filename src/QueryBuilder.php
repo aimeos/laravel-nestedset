@@ -145,6 +145,7 @@ class QueryBuilder extends EloquentBuilder
 
         $errors['duplicates'] = count($duplicatePairs);
         $nodeCount = count($nodes);
+        $parentChecks = [];
 
         foreach ($nodes as $index => $node) {
             if ($node['parent'] === null) {
@@ -168,20 +169,10 @@ class QueryBuilder extends EloquentBuilder
                 continue;
             }
 
-            foreach ($nodes as $intermediateIndex => $intermediate) {
-                if ($intermediateIndex === $parentIndex || $intermediateIndex === $index) {
-                    continue;
-                }
-
-                if ($node['lft'] >= $intermediate['lft'] &&
-                    $node['lft'] <= $intermediate['rgt'] &&
-                    $intermediate['lft'] >= $parent['lft'] &&
-                    $intermediate['lft'] <= $parent['rgt']
-                ) {
-                    ++$errors['wrong_parent'];
-                }
-            }
+            $parentChecks[] = [$index, $parentIndex];
         }
+
+        $errors['wrong_parent'] += $this->countIntermediateParentErrors($nodes, $parentChecks);
 
         return $errors;
     }
@@ -205,6 +196,7 @@ class QueryBuilder extends EloquentBuilder
 
         $nodes = [];
         $nodeByKey = [];
+        $parentChecks = [];
 
         foreach ($rows as $row) {
             $index = count($nodes);
@@ -237,22 +229,200 @@ class QueryBuilder extends EloquentBuilder
                 return true;
             }
 
-            foreach ($nodes as $intermediateIndex => $intermediate) {
-                if ($intermediateIndex === $parentIndex || $intermediateIndex === $index) {
-                    continue;
-                }
+            $parentChecks[] = [$index, $parentIndex];
+        }
 
-                if ($node['lft'] >= $intermediate['lft'] &&
-                    $node['lft'] <= $intermediate['rgt'] &&
-                    $intermediate['lft'] >= $parent['lft'] &&
-                    $intermediate['lft'] <= $parent['rgt']
-                ) {
-                    return true;
+        return $this->countIntermediateParentErrors($nodes, $parentChecks) > 0;
+    }
+
+
+    /**
+     * @param array $nodes
+     * @param array $checks
+     *
+     * @return int
+     */
+    protected function countIntermediateParentErrors(array $nodes, array $checks): int
+    {
+        if (empty($checks)) {
+            return 0;
+        }
+
+        $queries = [];
+
+        foreach ($checks as [$nodeIndex, $parentIndex]) {
+            $node = $nodes[$nodeIndex];
+            $parent = $nodes[$parentIndex];
+
+            $queries[] = [
+                'low' => $parent['lft'],
+                'high' => $node['lft'],
+                'point' => $node['lft'],
+                'nodeIndex' => $nodeIndex,
+                'parentIndex' => $parentIndex,
+            ];
+        }
+
+        $counts = $this->countIntervalsMatching($nodes, $queries);
+        $errors = 0;
+
+        foreach ($queries as $index => $query) {
+            $matched = $counts[$index];
+            $excluded = [];
+
+            foreach ([$query['parentIndex'], $query['nodeIndex']] as $nodeIndex) {
+                if ($this->intervalMatchesQuery($nodes[$nodeIndex], $query)) {
+                    $excluded[$nodeIndex] = true;
                 }
+            }
+
+            $errors += $matched - count($excluded);
+        }
+
+        return $errors;
+    }
+
+
+    /**
+     * @param array $node
+     * @param array $query
+     *
+     * @return bool
+     */
+    protected function intervalMatchesQuery(array $node, array $query): bool
+    {
+        return $node['lft'] >= $query['low']
+            && $node['lft'] <= $query['high']
+            && $node['rgt'] >= $query['point'];
+    }
+
+
+    /**
+     * @param array $nodes
+     * @param array $queries
+     *
+     * @return array
+     */
+    protected function countIntervalsMatching(array $nodes, array $queries): array
+    {
+        $sortedNodes = $nodes;
+        usort($sortedNodes, fn ($a, $b) => $a['lft'] <=> $b['lft']);
+
+        $rgtValues = [];
+
+        foreach ($nodes as $node) {
+            $rgtValues[$node['rgt']] = $node['rgt'];
+        }
+
+        sort($rgtValues);
+
+        $highCounts = $this->countIntervalsUpTo($sortedNodes, $rgtValues, $queries, 'high', true);
+        $lowCounts = $this->countIntervalsUpTo($sortedNodes, $rgtValues, $queries, 'low', false);
+        $counts = [];
+
+        foreach ($queries as $index => $_query) {
+            $counts[$index] = $highCounts[$index] - $lowCounts[$index];
+        }
+
+        return $counts;
+    }
+
+
+    /**
+     * @param array $sortedNodes
+     * @param array $rgtValues
+     * @param array $queries
+     * @param string $thresholdKey
+     * @param bool $inclusive
+     *
+     * @return array
+     */
+    protected function countIntervalsUpTo(array $sortedNodes, array $rgtValues, array $queries, string $thresholdKey, bool $inclusive): array
+    {
+        $queryOrder = array_keys($queries);
+        usort($queryOrder, fn ($a, $b) => $queries[$a][$thresholdKey] <=> $queries[$b][$thresholdKey]);
+
+        $tree = array_fill(0, count($rgtValues) + 1, 0);
+        $counts = [];
+        $total = 0;
+        $offset = 0;
+        $nodeCount = count($sortedNodes);
+
+        foreach ($queryOrder as $queryIndex) {
+            $threshold = $queries[$queryIndex][$thresholdKey];
+
+            while ($offset < $nodeCount && (
+                $inclusive
+                    ? $sortedNodes[$offset]['lft'] <= $threshold
+                    : $sortedNodes[$offset]['lft'] < $threshold
+            )) {
+                self::fenwickAdd($tree, self::lowerBound($rgtValues, $sortedNodes[$offset]['rgt']));
+                ++$total;
+                ++$offset;
+            }
+
+            $rank = self::lowerBound($rgtValues, $queries[$queryIndex]['point']);
+            $counts[$queryIndex] = $total - self::fenwickPrefix($tree, $rank);
+        }
+
+        return $counts;
+    }
+
+
+    /**
+     * @param array $tree
+     * @param int $rank
+     *
+     * @return void
+     */
+    protected static function fenwickAdd(array &$tree, int $rank): void
+    {
+        for ($index = $rank + 1, $count = count($tree); $index < $count; $index += $index & -$index) {
+            ++$tree[$index];
+        }
+    }
+
+
+    /**
+     * @param array $tree
+     * @param int $count
+     *
+     * @return int
+     */
+    protected static function fenwickPrefix(array $tree, int $count): int
+    {
+        $sum = 0;
+
+        for ($index = $count; $index > 0; $index -= $index & -$index) {
+            $sum += $tree[$index];
+        }
+
+        return $sum;
+    }
+
+
+    /**
+     * @param array $values
+     * @param int $needle
+     *
+     * @return int
+     */
+    protected static function lowerBound(array $values, int $needle): int
+    {
+        $low = 0;
+        $high = count($values);
+
+        while ($low < $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($values[$mid] < $needle) {
+                $low = $mid + 1;
+            } else {
+                $high = $mid;
             }
         }
 
-        return false;
+        return $low;
     }
 
 
