@@ -427,6 +427,14 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(array(0, 1, 2, 2), $nodes);
     }
 
+    public function testWithDepthUsesStoredDepthColumnWhenAvailable()
+    {
+        $sql = strtolower(static::getModelClass()::withDepth()->toSql());
+
+        $this->assertStringNotContainsString('count(1)', $sql);
+        $this->assertStringContainsString('depth', $sql);
+    }
+
     public function testWithDepthWithCustomKeyWorks()
     {
         $node = static::getModelClass()::whereIsRoot()->withDepth('level')->first();

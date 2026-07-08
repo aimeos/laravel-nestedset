@@ -21,6 +21,13 @@ use LogicException;
 class QueryBuilder extends EloquentBuilder
 {
     /**
+     * Cache depth-column existence checks per connection/table/column.
+     *
+     * @var array<string, bool>
+     */
+    protected static array $depthColumnCache = [];
+
+    /**
      * @var NodeTrait|Model
      */
     protected $model;
@@ -760,6 +767,16 @@ class QueryBuilder extends EloquentBuilder
     {
         if ($this->query->columns === null) $this->query->columns = ['*'];
 
+        if ($this->hasStoredDepthColumn()) {
+            $grammar = $this->query->getGrammar();
+
+            $this->query->selectRaw(
+                $this->wrappedTable().'.'.$grammar->wrap($this->model->getDepthName()).' as '.$grammar->wrap($as)
+            );
+
+            return $this;
+        }
+
         $table = $this->wrappedTable();
 
         list($lft, $rgt) = $this->wrappedColumns();
@@ -1063,6 +1080,23 @@ class QueryBuilder extends EloquentBuilder
         $this->model->applyNestedSetScope($query, $intermAlias);
 
         return $query;
+    }
+
+
+    /**
+     * @return bool
+     */
+    protected function hasStoredDepthColumn(): bool
+    {
+        $connection = $this->model->getConnection();
+        $key = implode('|', [
+            $connection->getName(),
+            $this->model->getTable(),
+            $this->model->getDepthName(),
+        ]);
+
+        return static::$depthColumnCache[$key]
+            ??= $connection->getSchemaBuilder()->hasColumn($this->model->getTable(), $this->model->getDepthName());
     }
 
 
