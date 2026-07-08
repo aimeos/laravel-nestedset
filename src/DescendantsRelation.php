@@ -2,6 +2,7 @@
 
 namespace Aimeos\Nestedset;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 
 
@@ -68,6 +69,69 @@ class DescendantsRelation extends BaseRelation
     protected function matches(Model $model, Model $related): bool
     {
         return $related->isDescendantOf($model);
+    }
+
+
+    /**
+     * @param EloquentCollection $results
+     *
+     * @return array|null
+     */
+    protected function indexResults(EloquentCollection $results): ?array
+    {
+        $entries = [];
+
+        foreach ($results as $position => $related) {
+            if ($related->getLft() === null || $related->getRgt() === null) {
+                return null;
+            }
+
+            $entries[] = [
+                'lft' => $related->getLft(),
+                'position' => $position,
+                'related' => $related,
+            ];
+        }
+
+        usort($entries, fn ($a, $b) => $a['lft'] <=> $b['lft']);
+
+        return [
+            'entries' => $entries,
+            'lfts' => array_column($entries, 'lft'),
+        ];
+    }
+
+
+    /**
+     * @param Model $model
+     * @param array $indexed
+     *
+     * @return EloquentCollection
+     */
+    protected function matchFromIndex(Model $model, array $indexed): EloquentCollection
+    {
+        if ($model->getLft() === null || $model->getRgt() === null) {
+            return $this->related->newCollection();
+        }
+
+        $matches = [];
+        $start = self::lowerBound($indexed['lfts'], $model->getLft() + 1);
+
+        for ($i = $start, $count = count($indexed['entries']); $i < $count; ++$i) {
+            $entry = $indexed['entries'][$i];
+
+            if ($entry['lft'] >= $model->getRgt()) {
+                break;
+            }
+
+            if ($this->matches($model, $entry['related'])) {
+                $matches[] = $entry;
+            }
+        }
+
+        usort($matches, fn ($a, $b) => $a['position'] <=> $b['position']);
+
+        return $this->related->newCollection(array_column($matches, 'related'));
     }
 
 

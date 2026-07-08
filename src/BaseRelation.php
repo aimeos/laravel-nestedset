@@ -288,4 +288,31 @@ abstract class BaseRelation extends Relation
         return $result;
     }
 
+
+    /**
+     * Find the first index whose value is greater than or equal to the needle.
+     *
+     * @param array $values
+     * @param int $needle
+     *
+     * @return int
+     */
+    protected static function lowerBound(array $values, int $needle): int
+    {
+        $low = 0;
+        $high = count($values);
+
+        while ($low < $high) {
+            $mid = intdiv($low + $high, 2);
+
+            if ($values[$mid] < $needle) {
+                $low = $mid + 1;
+            } else {
+                $high = $mid;
+            }
+        }
+
+        return $low;
+    }
+
 }

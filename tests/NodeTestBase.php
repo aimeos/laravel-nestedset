@@ -911,6 +911,22 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertTrue($nodes->find($this->ids[5])->descendants->contains('id', $this->ids[8]));
     }
 
+    public function testIndexedDescendantEagerMatchingPreservesResultOrder()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[1], $this->ids[5]])
+            ->defaultOrder()
+            ->get();
+
+        $nodes->load(['descendants' => function ($query) {
+            $query->orderBy('name');
+        }]);
+
+        $this->assertEquals(
+            ['galaxy', 'lenovo', 'nokia', 'samsung', 'sony'],
+            $nodes->find($this->ids[5])->descendants->pluck('name')->all()
+        );
+    }
+
     public function testDescendantsRelationQuery()
     {
         $nodes = static::getModelClass()::has('descendants')->whereIn('id', [$this->ids[2], $this->ids[3]])->get();
