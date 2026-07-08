@@ -1100,6 +1100,25 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(2, $nodes->first()->siblingsAndSelf->count());
     }
 
+    public function testIndexedSiblingEagerMatchingPreservesResultOrder()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [
+            $this->ids[6],
+            $this->ids[7],
+            $this->ids[9],
+            $this->ids[10],
+        ])->defaultOrder()->get();
+
+        $nodes->load(['siblings' => function ($query) {
+            $query->orderBy('name');
+        }]);
+
+        $this->assertEquals(
+            ['lenovo', 'nokia', 'sony'],
+            $nodes->find($this->ids[7])->siblings->pluck('name')->all()
+        );
+    }
+
     public function testSiblingsRelationQuery()
     {
         // apple (id=3) has 1 sibling, galaxy (id=8) has 0 siblings

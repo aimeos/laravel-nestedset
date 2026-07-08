@@ -136,7 +136,14 @@ class SiblingsRelation extends BaseRelation
         $index = [];
 
         foreach ($results as $related) {
-            $index[$related->getParentId() ?? ''][] = $related;
+            $key = $related->getParentId() ?? '';
+
+            if ($this->andSelf) {
+                $index[$key][] = $related;
+            } else {
+                $index[$key]['models'][] = $related;
+                $index[$key]['keys'][] = $related->getKey();
+            }
         }
 
         return $index;
@@ -151,13 +158,28 @@ class SiblingsRelation extends BaseRelation
      */
     protected function matchFromIndex(Model $model, array $indexed): \Illuminate\Database\Eloquent\Collection
     {
-        $candidates = $indexed[$model->getParentId() ?? ''] ?? [];
+        $group = $indexed[$model->getParentId() ?? ''] ?? null;
 
-        if ( ! $this->andSelf) {
-            $candidates = array_filter($candidates, fn($r) => $r->getKey() != $model->getKey());
+        if ($group === null) {
+            return $this->related->newCollection();
         }
 
-        return $this->related->newCollection($candidates);
+        if ($this->andSelf) {
+            return $this->related->newCollection($group);
+        }
+
+        $candidates = $group['models'];
+
+        $key = $model->getKey();
+        $matches = [];
+
+        foreach ($candidates as $offset => $candidate) {
+            if ($group['keys'][$offset] != $key) {
+                $matches[] = $candidate;
+            }
+        }
+
+        return $this->related->newCollection($matches);
     }
 
 
