@@ -10,7 +10,11 @@ class NestedSetSchemaTest extends Orchestra\Testbench\TestCase
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
             'driver' => env('DB_DRIVER', 'sqlite'),
+            'host' => env('DB_HOST', ''),
+            'port' => env('DB_PORT', ''),
             'database' => env('DB_DATABASE', ':memory:'),
+            'username' => env('DB_USERNAME', ''),
+            'password' => env('DB_PASSWORD', ''),
             'prefix' => 'prfx_',
         ]);
     }
