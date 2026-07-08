@@ -1,6 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use Aimeos\Nestedset\NestedSet;
 
 class NestedSetCacheTest extends TestCase
 {
@@ -19,5 +20,29 @@ class NestedSetCacheTest extends TestCase
 
         $this->assertSame([Category::class => true], $categoryCache->getValue());
         $this->assertSame([MenuItem::class => false], $menuItemCache->getValue());
+    }
+
+    public function testNodeTraitCheckIsCachedPerClass(): void
+    {
+        $property = new ReflectionProperty(NestedSet::class, 'nodeClassCache');
+        $property->setAccessible(true);
+        $property->setValue(null, []);
+
+        $this->assertTrue(NestedSet::isNode(new Category()));
+        $this->assertTrue(NestedSet::isNode(new CategoryUuid()));
+        $this->assertFalse(NestedSet::isNode(new stdClass()));
+        $this->assertFalse(NestedSet::isNode(null));
+
+        $cache = $property->getValue();
+
+        $this->assertSame([
+            Category::class => true,
+            CategoryUuid::class => true,
+            stdClass::class => false,
+        ], array_intersect_key($cache, [
+            Category::class => true,
+            CategoryUuid::class => true,
+            stdClass::class => true,
+        ]));
     }
 }

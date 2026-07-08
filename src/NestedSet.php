@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Schema;
 class NestedSet
 {
     /**
+     * Cache NodeTrait detection checks per class.
+     *
+     * @var array<class-string, bool>
+     */
+    protected static array $nodeClassCache = [];
+
+    /**
      * The name of default lft column.
      */
     const LFT = '_lft';
@@ -139,16 +146,22 @@ class NestedSet
             return false;
         }
 
+        $class = get_class($node);
+
+        if(array_key_exists($class, static::$nodeClassCache)) {
+            return static::$nodeClassCache[$class];
+        }
+
         if(array_key_exists(NodeTrait::class, class_uses($node))) {
-            return true;
+            return static::$nodeClassCache[$class] = true;
         }
 
         foreach(class_parents($node) as $parent) {
             if(array_key_exists(NodeTrait::class, class_uses($parent))) {
-                return true;
+                return static::$nodeClassCache[$class] = true;
             }
         }
 
-        return false;
+        return static::$nodeClassCache[$class] = false;
     }
 }
