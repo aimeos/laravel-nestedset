@@ -188,16 +188,20 @@ class QueryBuilder extends EloquentBuilder
             $this->model->getDepthName(),
         ], $extraColumns);
 
-        $dictionary = $this->model
+        $nodes = $this->model
             ->newNestedSetQuery()
             ->withoutGlobalScopes()
             ->when($root, function (self $query) use ($root) {
                 return $query->whereDescendantOf($root);
             })
             ->defaultOrder()
-            ->get($columns)
-            ->groupBy($this->model->getParentIdName())
-            ->all();
+            ->get($columns);
+
+        $dictionary = [];
+
+        foreach ($nodes as $node) {
+            $dictionary[$node->getParentId() ?? ''][] = $node;
+        }
 
         return $this->fixNodes($dictionary, $root);
     }
@@ -1222,7 +1226,7 @@ class QueryBuilder extends EloquentBuilder
      */
     protected static function dictionaryNodes(array|\Illuminate\Support\Collection $nodes): array
     {
-        return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : array_values($nodes);
+        return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : $nodes;
     }
 
 

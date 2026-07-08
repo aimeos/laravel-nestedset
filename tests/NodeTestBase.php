@@ -857,6 +857,25 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(null, $node->getParentId());
     }
 
+    public function testFixTreeRepairsBranchingParentBuckets()
+    {
+        static::getModelClass()::query()->update([
+            '_lft' => 0,
+            '_rgt' => 0,
+            'depth' => 0,
+        ]);
+
+        $fixed = static::getModelClass()::fixTree();
+
+        $this->assertEquals(11, $fixed);
+        $this->assertTreeNotBroken();
+
+        $galaxy = static::getModelClass()::find($this->ids[8]);
+
+        $this->assertEquals(3, $galaxy->getDepth());
+        $this->assertEquals([$this->ids[1], $this->ids[5], $this->ids[7]], $galaxy->getAncestors()->pluck('id')->all());
+    }
+
     public function testSubtreeIsFixed()
     {
         static::getModelClass()::where('id', '=', $this->ids[8])->update(['_lft' => 11]);
