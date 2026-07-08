@@ -48,6 +48,49 @@ class SiblingsRelation extends BaseRelation
 
 
     /**
+     * Set the constraints for an eager load of the relation.
+     *
+     * @param  array $models
+     *
+     * @return void
+     */
+    public function addEagerConstraints(array $models): void
+    {
+        $models = $this->prepareEagerModels($models);
+
+        if (empty($models)) {
+            $this->query->whereRaw('0 = 1');
+
+            return;
+        }
+
+        $parentIdName = $this->parent->getParentIdName();
+        $parentIds = [];
+        $hasRootParent = false;
+
+        foreach ($models as $model) {
+            if ($model->getParentId() === null) {
+                $hasRootParent = true;
+            } else {
+                $parentIds[$model->getParentId()] = $model->getParentId();
+            }
+        }
+
+        $this->query->where(function ($inner) use ($parentIdName, $parentIds, $hasRootParent) {
+            if ($parentIds) {
+                $inner->whereIn($parentIdName, array_values($parentIds));
+            }
+
+            if ($hasRootParent) {
+                $parentIds
+                    ? $inner->orWhereNull($parentIdName)
+                    : $inner->whereNull($parentIdName);
+            }
+        });
+    }
+
+
+    /**
      * @param QueryBuilder $query
      * @param Model $model
      *

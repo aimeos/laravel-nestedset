@@ -980,6 +980,43 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertTrue($nodes->first()->relationLoaded('siblings'));
     }
 
+    public function testSiblingEagerLoadUsesParentIdSetConstraint()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[3], $this->ids[7]])
+            ->defaultOrder()
+            ->get();
+
+        DB::flushQueryLog();
+
+        $nodes->load('siblings');
+
+        $queries = DB::connection()->getQueryLog();
+        $relationQuery = strtolower(end($queries)['query']);
+
+        $this->assertStringContainsString(' in ', $relationQuery);
+        $this->assertStringNotContainsString(' or ', $relationQuery);
+        $this->assertEquals([$this->ids[4]], $nodes->find($this->ids[3])->siblings->pluck('id')->all());
+        $this->assertEquals([$this->ids[6], $this->ids[9], $this->ids[10]], $nodes->find($this->ids[7])->siblings->pluck('id')->all());
+    }
+
+    public function testRootSiblingEagerLoadUsesNullParentConstraint()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[1], $this->ids[11]])
+            ->defaultOrder()
+            ->get();
+
+        DB::flushQueryLog();
+
+        $nodes->load('siblings');
+
+        $queries = DB::connection()->getQueryLog();
+        $relationQuery = strtolower(end($queries)['query']);
+
+        $this->assertStringContainsString('is null', $relationQuery);
+        $this->assertEquals([$this->ids[11]], $nodes->find($this->ids[1])->siblings->pluck('id')->all());
+        $this->assertEquals([$this->ids[1]], $nodes->find($this->ids[11])->siblings->pluck('id')->all());
+    }
+
     public function testSiblingsAndSelfEagerlyLoaded()
     {
         $nodes = static::getModelClass()::whereIn('id', [$this->ids[3], $this->ids[7]])->get();
