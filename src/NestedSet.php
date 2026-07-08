@@ -119,7 +119,8 @@ class NestedSet
     {
         $table->dropIndex([self::PARENT_ID, self::LFT]);
         $table->dropIndex([self::LFT, self::RGT]);
-        }
+        $table->dropIndex([self::RGT]);
+    }
 
 
     /**
