@@ -963,6 +963,22 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         );
     }
 
+    public function testIndexedAncestorEagerMatchingPreservesResultOrder()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[8]])
+            ->defaultOrder()
+            ->get();
+
+        $nodes->load(['ancestors' => function ($query) {
+            $query->reorder('name');
+        }]);
+
+        $this->assertEquals(
+            ['mobile', 'samsung', 'store'],
+            $nodes->find($this->ids[8])->ancestors->pluck('name')->all()
+        );
+    }
+
     public function testDescendantsRelationQuery()
     {
         $nodes = static::getModelClass()::has('descendants')->whereIn('id', [$this->ids[2], $this->ids[3]])->get();
