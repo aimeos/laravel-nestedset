@@ -799,6 +799,19 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertTrue(static::getModelClass()::isBroken());
     }
 
+    public function testIsBrokenDetectsDuplicateErrors()
+    {
+        static::getModelClass()::where('id', '=', $this->ids[11])->update(['_lft' => 3]);
+
+        DB::flushQueryLog();
+
+        $this->assertTrue(static::getModelClass()::isBroken());
+
+        foreach (DB::connection()->getQueryLog() as $query) {
+            $this->assertStringNotContainsString('join', strtolower($query['query']));
+        }
+    }
+
     public function testIsBrokenShortCircuitsOnOddness()
     {
         static::getModelClass()::where('id', '=', $this->ids[5])->update([
@@ -1070,6 +1083,24 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
 
         $this->assertEquals(
             ['galaxy', 'lenovo', 'nokia', 'samsung', 'sony'],
+            $nodes->find($this->ids[5])->descendants->pluck('name')->all()
+        );
+    }
+
+    public function testIndexedDescendantEagerMatchingPreservesDefaultResultOrder()
+    {
+        $nodes = static::getModelClass()::whereIn('id', [$this->ids[2], $this->ids[5]])
+            ->defaultOrder()
+            ->get();
+
+        $nodes->load('descendants');
+
+        $this->assertEquals(
+            ['apple', 'lenovo'],
+            $nodes->find($this->ids[2])->descendants->pluck('name')->all()
+        );
+        $this->assertEquals(
+            ['nokia', 'samsung', 'galaxy', 'sony', 'lenovo'],
             $nodes->find($this->ids[5])->descendants->pluck('name')->all()
         );
     }

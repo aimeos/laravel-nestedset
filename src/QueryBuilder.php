@@ -643,11 +643,15 @@ class QueryBuilder extends EloquentBuilder
      */
     public function isBroken(): bool
     {
-        if ($this->getOdnessQuery()->exists() || $this->getDuplicatesQuery()->exists()) {
+        if ($this->getOdnessQuery()->exists()) {
             return true;
         }
 
-        return $this->hasParentErrors();
+        $errors = $this->countErrors();
+
+        return $errors['duplicates'] > 0
+            || $errors['wrong_parent'] > 0
+            || $errors['missing_parent'] > 0;
     }
 
 
