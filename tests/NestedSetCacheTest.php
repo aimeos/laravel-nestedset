@@ -8,11 +8,9 @@ class NestedSetCacheTest extends TestCase
     public function testUsesSoftDeleteCheckIsCachedPerModelClass(): void
     {
         $categoryCache = new ReflectionProperty(Category::class, 'usesSoftDeleteCache');
-        $categoryCache->setAccessible(true);
         $categoryCache->setValue(null, []);
 
         $menuItemCache = new ReflectionProperty(MenuItem::class, 'usesSoftDeleteCache');
-        $menuItemCache->setAccessible(true);
         $menuItemCache->setValue(null, []);
 
         $this->assertTrue(Category::usesSoftDelete());
@@ -25,7 +23,6 @@ class NestedSetCacheTest extends TestCase
     public function testNodeTraitCheckIsCachedPerClass(): void
     {
         $property = new ReflectionProperty(NestedSet::class, 'nodeClassCache');
-        $property->setAccessible(true);
         $property->setValue(null, []);
 
         $this->assertTrue(NestedSet::isNode(new Category()));
