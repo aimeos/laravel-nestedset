@@ -80,29 +80,110 @@ class QueryBuilder extends EloquentBuilder
      */
     public function countErrors(): array
     {
-        $checks = [];
+        $keyName = $this->model->getKeyName();
+        $parentIdName = $this->model->getParentIdName();
+        $lftName = $this->model->getLftName();
+        $rgtName = $this->model->getRgtName();
 
-        // Check if lft and rgt values are ok
-        $checks['oddness'] = $this->getOdnessQuery();
+        $rows = $this->model
+            ->newNestedSetQuery()
+            ->withoutGlobalScopes()
+            ->toBase()
+            ->get([$keyName, $parentIdName, $lftName, $rgtName]);
 
-        // Check if lft and rgt values are unique
-        $checks['duplicates'] = $this->getDuplicatesQuery();
+        $errors = [
+            'oddness' => 0,
+            'duplicates' => 0,
+            'wrong_parent' => 0,
+            'missing_parent' => 0,
+        ];
 
-        // Check if parent_id is set correctly
-        $checks['wrong_parent'] = $this->getWrongParentQuery();
+        $nodes = [];
+        $nodeByKey = [];
+        $endpointOwners = [];
 
-        // Check for nodes that have missing parent
-        $checks['missing_parent' ] = $this->getMissingParentQuery();
+        foreach ($rows as $row) {
+            $index = count($nodes);
+            $key = $this->dictionaryKey($row->{$keyName});
+            $parent = $row->{$parentIdName};
+            $lft = (int) $row->{$lftName};
+            $rgt = (int) $row->{$rgtName};
 
-        $query = $this->query->newQuery();
+            $nodes[] = [
+                'key' => $key,
+                'parent' => $parent,
+                'lft' => $lft,
+                'rgt' => $rgt,
+            ];
+            $nodeByKey[$key] = $index;
 
-        foreach ($checks as $key => $inner) {
-            $inner->selectRaw('count(1)');
+            if ($lft >= $rgt || ($rgt - $lft) % 2 === 0) {
+                ++$errors['oddness'];
+            }
 
-            $query->selectSub($inner, $key);
+            $endpointOwners[(string) $lft][] = $index;
+
+            if ($rgt !== $lft) {
+                $endpointOwners[(string) $rgt][] = $index;
+            }
         }
 
-        return (array)$query->first();
+        $duplicatePairs = [];
+
+        foreach ($endpointOwners as $owners) {
+            $count = count($owners);
+
+            for ($i = 0; $i < $count; ++$i) {
+                for ($j = $i + 1; $j < $count; ++$j) {
+                    $first = $owners[$i];
+                    $second = $owners[$j];
+
+                    $duplicatePairs[$first < $second ? "{$first}|{$second}" : "{$second}|{$first}"] = true;
+                }
+            }
+        }
+
+        $errors['duplicates'] = count($duplicatePairs);
+        $nodeCount = count($nodes);
+
+        foreach ($nodes as $index => $node) {
+            if ($node['parent'] === null) {
+                continue;
+            }
+
+            $parentKey = $this->dictionaryKey($node['parent']);
+
+            if ( ! isset($nodeByKey[$parentKey])) {
+                ++$errors['missing_parent'];
+
+                continue;
+            }
+
+            $parentIndex = $nodeByKey[$parentKey];
+            $parent = $nodes[$parentIndex];
+
+            if ($node['lft'] < $parent['lft'] || $node['lft'] > $parent['rgt']) {
+                $errors['wrong_parent'] += $nodeCount - ($parentIndex === $index ? 1 : 2);
+
+                continue;
+            }
+
+            foreach ($nodes as $intermediateIndex => $intermediate) {
+                if ($intermediateIndex === $parentIndex || $intermediateIndex === $index) {
+                    continue;
+                }
+
+                if ($node['lft'] >= $intermediate['lft'] &&
+                    $node['lft'] <= $intermediate['rgt'] &&
+                    $intermediate['lft'] >= $parent['lft'] &&
+                    $intermediate['lft'] <= $parent['rgt']
+                ) {
+                    ++$errors['wrong_parent'];
+                }
+            }
+        }
+
+        return $errors;
     }
 
 
@@ -1240,6 +1321,17 @@ class QueryBuilder extends EloquentBuilder
     protected static function dictionaryNodes(array|\Illuminate\Support\Collection $nodes): array
     {
         return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : $nodes;
+    }
+
+
+    /**
+     * @param mixed $key
+     *
+     * @return string
+     */
+    protected function dictionaryKey(mixed $key): string
+    {
+        return (string) $key;
     }
 
 

@@ -771,6 +771,18 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals(1, $errors['missing_parent']);
     }
 
+    public function testCountsWrongParentErrors()
+    {
+        static::getModelClass()::where('id', '=', $this->ids[8])->update(['parent_id' => $this->ids[5]]);
+
+        $errors = static::getModelClass()::countErrors();
+
+        $this->assertEquals(0, $errors['oddness']);
+        $this->assertEquals(0, $errors['duplicates']);
+        $this->assertEquals(1, $errors['wrong_parent']);
+        $this->assertEquals(0, $errors['missing_parent']);
+    }
+
     public function testIsBrokenShortCircuitsOnOddness()
     {
         static::getModelClass()::where('id', '=', $this->ids[5])->update([
