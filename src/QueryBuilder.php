@@ -485,7 +485,9 @@ class QueryBuilder extends EloquentBuilder
      */
     public function rebuildTree(array $data, bool $delete = false, ?Model $root = null): int
     {
-        if ($this->model->usesSoftDelete()) {
+        $usesSoftDelete = $this->model->usesSoftDelete();
+
+        if ($usesSoftDelete) {
             $this->withTrashed();
         }
 
@@ -504,22 +506,28 @@ class QueryBuilder extends EloquentBuilder
 
         /** @var Model|NodeTrait $model */
         if ( ! empty($existing)) {
-            if ($delete && ! $this->model->usesSoftDelete()) {
+            if ($delete && ! $usesSoftDelete) {
                 $this->model
                     ->newScopedQuery()
                     ->withoutGlobalScopes()
                     ->whereIn($this->model->getKeyName(), array_keys($existing))
                     ->delete();
             } else {
+                $deletedAtColumn = null;
+                $deletedAt = null;
+
+                if ($delete && $usesSoftDelete) {
+                    $deletedAtColumn = $this->model->getDeletedAtColumn();
+                    $deletedAt = $this->model->fromDateTime($this->model->freshTimestamp());
+                }
+
                 foreach ($existing as $model) {
                     $dictionary[$model->getParentId() ?? ''][] = $model;
 
-                    if ($delete && $this->model->usesSoftDelete() &&
-                        ! $model->{$model->getDeletedAtColumn()}
+                    if ($deletedAtColumn !== null &&
+                        ! $model->{$deletedAtColumn}
                     ) {
-                        $time = $this->model->fromDateTime($this->model->freshTimestamp());
-
-                        $model->{$model->getDeletedAtColumn()} = $time;
+                        $model->{$deletedAtColumn} = $deletedAt;
                     }
                 }
             }

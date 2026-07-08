@@ -1239,6 +1239,18 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertTrue($nodes->count() > 1);
     }
 
+    public function testRebuildTreeSoftDeletesRemovedNodes()
+    {
+        static::getModelClass()::rebuildTree([
+            ['id' => $this->ids[1], 'name' => 'store'],
+        ], true);
+
+        $deleted = static::getModelClass()::withTrashed()->find($this->ids[2]);
+
+        $this->assertNotNull($deleted);
+        $this->assertNotNull($deleted->{$deleted->getDeletedAtColumn()});
+    }
+
     public function testRebuildFailsWithInvalidPK()
     {
         $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
