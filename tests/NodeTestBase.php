@@ -1283,6 +1283,31 @@ abstract class NodeTestBase extends \Orchestra\Testbench\TestCase
         $this->assertEquals('store_2', $tree->last()->name);
     }
 
+    public function testToFlatTreeHandlesDeepTreeIteratively()
+    {
+        $modelClass = static::getModelClass();
+        $nodes = [];
+        $count = 75;
+
+        for ($i = 1; $i <= $count; ++$i) {
+            $node = new $modelClass;
+            $node->setRawAttributes([
+                'id' => $i,
+                '_lft' => $i,
+                '_rgt' => ($count * 2) - $i + 1,
+                'parent_id' => $i === 1 ? null : $i - 1,
+                'depth' => $i - 1,
+            ], true);
+
+            $nodes[] = $node;
+        }
+
+        $tree = \Aimeos\Nestedset\Collection::make($nodes)->toFlatTree();
+
+        $this->assertEquals($count, $tree->count());
+        $this->assertEquals(range(1, $count), $tree->pluck('id')->all());
+    }
+
     public function testNewRootNodeIsSiblingOfExisting()
     {
         $model = static::getModelClass();

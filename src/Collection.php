@@ -150,13 +150,32 @@ class Collection extends BaseCollection
      */
     protected function flattenTree(self $groupedNodes, int|string|null $parentId): self
     {
-        foreach ($groupedNodes->get($parentId ?? '', []) as $node) {
+        $stack = array_reverse($this->nodesForParent($groupedNodes, $parentId));
+
+        while ($stack) {
+            $node = array_pop($stack);
             $this->push($node);
 
-            $this->flattenTree($groupedNodes, $node->getKey());
+            foreach (array_reverse($this->nodesForParent($groupedNodes, $node->getKey())) as $child) {
+                $stack[] = $child;
+            }
         }
 
         return $this;
+    }
+
+
+    /**
+     * @param Collection $groupedNodes
+     * @param int|string|null $parentId
+     *
+     * @return array
+     */
+    protected function nodesForParent(self $groupedNodes, int|string|null $parentId): array
+    {
+        $nodes = $groupedNodes->get($parentId ?? '', []);
+
+        return $nodes instanceof \Illuminate\Support\Collection ? $nodes->all() : (array) $nodes;
     }
 
 }
